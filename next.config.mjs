@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // In dev, React StrictMode intentionally double-invokes effects which triggers
+  // multiple Phantom signature popups during login. Disable it for this app.
+  reactStrictMode: false,
+
   typescript: {
     ignoreBuildErrors: true,
   },

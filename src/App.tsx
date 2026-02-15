@@ -28,6 +28,7 @@ import {
 const BASE58_ALPHABET =
   "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 function base58Encode(bytes: Uint8Array): string {
+
   if (!bytes.length) return "";
 
   const digits: number[] = [0];
@@ -55,6 +56,10 @@ function base58Encode(bytes: Uint8Array): string {
   return out;
 }
 
+// Global login mutex (module-level). Needed because in dev/hot-reload the component can remount,
+// and a useRef mutex resets, causing multiple Phantom signature prompts.
+let appLoginInFlight: Promise<void> | null = null;
+
 function AppContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -65,7 +70,6 @@ function AppContent() {
   const [onRoiChange, setOnRoiChange] = useState<(() => void) | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const wallet = useWallet();
-  const loginInFlight = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,21 +136,19 @@ function AppContent() {
       }
     }
 
-    if (loginInFlight.current) {
+    if (appLoginInFlight) {
       // Prevent multiple concurrent login attempts (causes multiple Phantom signature popups)
       return;
     }
 
-    const p = loginAndRegister()
+    appLoginInFlight = loginAndRegister()
       .catch((err) => {
         console.error("Auth/register failed:", err);
         if (!cancelled) setAuthReady(false);
       })
       .finally(() => {
-        loginInFlight.current = null;
+        appLoginInFlight = null;
       });
-
-    loginInFlight.current = p;
 
     return () => {
       cancelled = true;
