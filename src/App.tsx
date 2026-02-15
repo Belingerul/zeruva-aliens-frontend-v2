@@ -174,19 +174,25 @@ function AppContent() {
     setOnRoiChange(() => onRoiChangeFn);
   }, []);
 
-  return (
-    <div className="min-h-dvh lg:h-dvh flex flex-col bg-gradient-to-br from-gray-950 via-gray-900 to-black">
-      <TopBar />
-
-      {/* Gate API-heavy components until auth finishes to avoid initial 401 + “double bearer” UX */}
-      {wallet.connected && !authReady ? (
+  // If wallet is connected but auth isn't ready yet, do NOT mount the rest of the app.
+  // Otherwise multiple components will fire API calls, hit 401, and trigger extra signMessage prompts.
+  if (wallet.connected && !authReady) {
+    return (
+      <div className="min-h-dvh lg:h-dvh flex flex-col bg-gradient-to-br from-gray-950 via-gray-900 to-black">
+        <TopBar />
         <div className="flex-1 min-h-0 flex items-center justify-center text-gray-200">
           <div className="bg-black/40 border border-gray-700 rounded-xl px-6 py-5 text-center">
             <div className="text-lg font-semibold">Signing in…</div>
             <div className="text-sm text-gray-400 mt-1">Approve the Phantom signature request</div>
           </div>
         </div>
-      ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-dvh lg:h-dvh flex flex-col bg-gradient-to-br from-gray-950 via-gray-900 to-black">
+      <TopBar />
 
       {/*
         Responsive layout notes:
@@ -194,7 +200,7 @@ function AppContent() {
           make it unreliable and it forces awkward internal scrolling.
         - Use flex-1 + min-h-0 so children can size/scroll correctly.
       */}
-      <div className={`flex flex-col lg:flex-row gap-4 sm:gap-6 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 flex-1 min-h-0 lg:overflow-hidden ${wallet.connected && !authReady ? 'pointer-events-none opacity-20' : ''}`}>
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 flex-1 min-h-0 lg:overflow-hidden">
         <LeftPanel
           onOpenSpin={() => setIsModalOpen(true)}
           onRefreshRewardsReady={handleRefreshRewardsReady}
