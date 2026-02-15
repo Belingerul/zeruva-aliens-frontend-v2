@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   ConnectionProvider,
   WalletProvider,
@@ -65,6 +65,7 @@ function AppContent() {
   const [onRoiChange, setOnRoiChange] = useState<(() => void) | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const wallet = useWallet();
+  const loginInFlight = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,10 +132,21 @@ function AppContent() {
       }
     }
 
-    loginAndRegister().catch((err) => {
-      console.error("Auth/register failed:", err);
-      if (!cancelled) setAuthReady(false);
-    });
+    if (loginInFlight.current) {
+      // Prevent multiple concurrent login attempts (causes multiple Phantom signature popups)
+      return;
+    }
+
+    const p = loginAndRegister()
+      .catch((err) => {
+        console.error("Auth/register failed:", err);
+        if (!cancelled) setAuthReady(false);
+      })
+      .finally(() => {
+        loginInFlight.current = null;
+      });
+
+    loginInFlight.current = p;
 
     return () => {
       cancelled = true;
