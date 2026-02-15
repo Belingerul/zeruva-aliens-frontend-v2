@@ -63,13 +63,19 @@ function AppContent() {
     (() => Promise<void>) | null
   >(null);
   const [onRoiChange, setOnRoiChange] = useState<(() => void) | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const wallet = useWallet();
 
   useEffect(() => {
     let cancelled = false;
 
     async function loginAndRegister() {
-      if (!wallet.connected || !wallet.publicKey) return;
+      if (!wallet.connected || !wallet.publicKey) {
+        if (!cancelled) setAuthReady(false);
+        return;
+      }
+
+      if (!cancelled) setAuthReady(false);
 
       const walletAddress = wallet.publicKey.toString();
 
@@ -89,30 +95,45 @@ function AppContent() {
       // If we already have a token for this wallet, just register.
       if (getAuthToken() && getAuthWallet() === walletAddress) {
         await registerUser();
+        if (!cancelled) setAuthReady(true);
         return;
       }
 
-      // 1) Get nonce
-      const { nonce, message } = await getNonce(walletAddress);
+      // Login flow can occasionally fail if the nonce expires or gets consumed.
+      // Retry once to avoid the “two bearer tokens” UX.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          // 1) Get nonce
+          const { nonce, message } = await getNonce(walletAddress);
 
-      // 2) Sign message
-      const encoded = new TextEncoder().encode(message);
-      const signed = await wallet.signMessage(encoded);
+          // 2) Sign message
+          const encoded = new TextEncoder().encode(message);
+          const signed = await wallet.signMessage(encoded);
 
-      // 3) Send signature to backend (base58)
-      // wallet-adapter gives Uint8Array signature
-      const signature = base58Encode(signed);
+          // 3) Send signature to backend (base58)
+          const signature = base58Encode(signed);
 
-      const { token } = await verifySignature(walletAddress, nonce, signature);
-      setAuthToken(token, walletAddress);
+          const { token } = await verifySignature(walletAddress, nonce, signature);
+          setAuthToken(token, walletAddress);
 
-      if (!cancelled) {
-        await registerUser();
+          await registerUser();
+          if (!cancelled) setAuthReady(true);
+          return;
+        } catch (e: any) {
+          const msg = e?.message || String(e);
+          const isNonce = /Invalid\/expired nonce/i.test(msg);
+          if (attempt === 0 && isNonce) {
+            // retry once
+            continue;
+          }
+          throw e;
+        }
       }
     }
 
     loginAndRegister().catch((err) => {
       console.error("Auth/register failed:", err);
+      if (!cancelled) setAuthReady(false);
     });
 
     return () => {
@@ -143,13 +164,23 @@ function AppContent() {
     <div className="min-h-dvh lg:h-dvh flex flex-col bg-gradient-to-br from-gray-950 via-gray-900 to-black">
       <TopBar />
 
+      {/* Gate API-heavy components until auth finishes to avoid initial 401 + “double bearer” UX */}
+      {wallet.connected && !authReady ? (
+        <div className="flex-1 min-h-0 flex items-center justify-center text-gray-200">
+          <div className="bg-black/40 border border-gray-700 rounded-xl px-6 py-5 text-center">
+            <div className="text-lg font-semibold">Signing in…</div>
+            <div className="text-sm text-gray-400 mt-1">Approve the Phantom signature request</div>
+          </div>
+        </div>
+      ) : null}
+
       {/*
         Responsive layout notes:
         - Avoid hard-coding a fixed content height (100vh - X) because browser UI + mobile safe areas
           make it unreliable and it forces awkward internal scrolling.
         - Use flex-1 + min-h-0 so children can size/scroll correctly.
       */}
-      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 flex-1 min-h-0 lg:overflow-hidden">
+      <div className={`flex flex-col lg:flex-row gap-4 sm:gap-6 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 flex-1 min-h-0 lg:overflow-hidden ${wallet.connected && !authReady ? 'pointer-events-none opacity-20' : ''}`}>
         <LeftPanel
           onOpenSpin={() => setIsModalOpen(true)}
           onRefreshRewardsReady={handleRefreshRewardsReady}
