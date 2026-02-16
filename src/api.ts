@@ -167,6 +167,18 @@ export const upgradeShipLevel = async (wallet: string, newLevel: number) => {
 
 export const upgradeShip = upgradeShipLevel;
 
+export const getPlanets = async () => {
+  return await apiRequest(`/planets`, { method: "GET" });
+};
+
+export const getInventory = async () => {
+  return await apiRequest(`/inventory`, { method: "GET" });
+};
+
+export const upgradeShipWithItems = async () => {
+  return await apiRequest(`/ship/upgrade-with-items`, { method: "POST", body: JSON.stringify({}) });
+};
+
 export const getExpeditionStatus = async () => {
   return await apiRequest(`/expedition/status`, { method: "GET" });
 };

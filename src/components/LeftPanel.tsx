@@ -4,6 +4,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { getShipWithSlots, type ShipWithSlots } from "../api";
 import RewardsCard from "./RewardsCard";
 import QuoteCard from "./QuoteCard";
+import InventoryCard from "./InventoryCard";
 import ConfirmModal from "./ConfirmModal";
 import { useEffect, useMemo, useState } from "react";
 
@@ -219,6 +220,9 @@ export default function LeftPanel({
 
       {/* Quote / Treasury */}
       <QuoteCard nextUpgradeUsd={nextPriceUsd} />
+
+      {/* Inventory (Expedition loot materials) */}
+      <InventoryCard />
 
       {/* Passive Income / Rewards Card */}
       <RewardsCard

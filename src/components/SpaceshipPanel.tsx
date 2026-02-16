@@ -235,6 +235,26 @@ export default function SpaceshipPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expeditionSecondsLeft, expedition?.expedition_active]);
 
+  const [planets, setPlanets] = useState<any[]>([]);
+  const [selectedPlanet, setSelectedPlanet] = useState<string>("planet-1");
+
+  const loadPlanets = async () => {
+    try {
+      const { getPlanets } = await import("../api");
+      const r: any = await getPlanets();
+      setPlanets(r?.planets || []);
+      if (r?.planets?.[0] && !r.planets.find((p: any) => p.key === selectedPlanet)) {
+        setSelectedPlanet(r.planets[0].key);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    loadPlanets();
+  }, [publicKey]);
+
   const handleStartExpedition = async () => {
     if (!publicKey || expeditionWorking) return;
 
@@ -244,7 +264,7 @@ export default function SpaceshipPanel({
     setExpeditionWorking(true);
     try {
       const { startExpedition } = await import("../api");
-      const st = await startExpedition("planet-1");
+      const st = await startExpedition(selectedPlanet || "planet-1");
       setExpedition(st);
 
       // Force a rewards refresh so ROI switches from 0 -> assigned ROI immediately
@@ -346,6 +366,23 @@ export default function SpaceshipPanel({
         </div>
 
         <div className="mt-2 space-y-3">
+          {!expedition?.expedition_active && planets?.length ? (
+            <div className="bg-black/30 border border-gray-800 rounded-lg p-3">
+              <div className="text-sm text-gray-300 font-semibold mb-2">Select Planet</div>
+              <select
+                value={selectedPlanet}
+                onChange={(e) => setSelectedPlanet(e.target.value)}
+                className="w-full bg-black/50 border border-gray-700 rounded-md px-3 py-2 text-gray-100"
+              >
+                {planets.map((p: any) => (
+                  <option key={p.key} value={p.key}>
+                    {p.name || p.key} (x{p.roiMult || 1})
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
           <motion.button
             whileHover={{ scale: expedition?.expedition_active ? 1 : 1.02 }}
             whileTap={{ scale: expedition?.expedition_active ? 1 : 0.98 }}
