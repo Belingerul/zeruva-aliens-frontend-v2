@@ -26,7 +26,6 @@ export default function GreatExpeditionPanel() {
     if (!wallet.publicKey) return;
     setLoading(true);
     try {
-      await ensureAuth(wallet as any);
       const r: any = await geGetCurrentRound();
       setRound(r?.round || null);
       setStats(r?.stats || null);
