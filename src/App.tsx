@@ -10,12 +10,8 @@ import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import TopBar from "./components/TopBar";
-import LeftPanel from "./components/LeftPanel";
-import AlienMenu from "./components/AlienMenu";
-import SpinModal from "./components/SpinModal";
-import SpaceshipPanel from "./components/SpaceshipPanel";
+import GreatExpeditionPanel from "./components/GreatExpeditionPanel";
 import {
-  registerUser,
   clearAuthToken,
   getAuthToken,
   getAuthWallet,
@@ -61,13 +57,6 @@ function base58Encode(bytes: Uint8Array): string {
 let appLoginInFlight: Promise<void> | null = null;
 
 function AppContent() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [mobileTab, setMobileTab] = useState<"aliens" | "ship">("aliens");
-  const [refreshRewards, setRefreshRewards] = useState<
-    (() => Promise<void>) | null
-  >(null);
-  const [onRoiChange, setOnRoiChange] = useState<(() => void) | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const wallet = useWallet();
 
@@ -159,146 +148,21 @@ function AppContent() {
     setRefreshKey((prev) => prev + 1);
   };
 
-  const handleSpinComplete = () => {
-    handleRefresh();
-  };
-
-  const handleRefreshRewardsReady = useCallback(
-    (refreshFn: () => Promise<void>) => {
-      setRefreshRewards(() => refreshFn);
-    },
-    [],
-  );
-
-  const handleRoiChangeReady = useCallback((onRoiChangeFn: () => void) => {
-    setOnRoiChange(() => onRoiChangeFn);
-  }, []);
-
-  // If wallet is connected but auth isn't ready yet, do NOT mount the rest of the app.
-  // Otherwise multiple components will fire API calls, hit 401, and trigger extra signMessage prompts.
-  if (wallet.connected && !authReady) {
-    return (
-      <div className="min-h-dvh lg:h-dvh flex flex-col bg-gradient-to-br from-gray-950 via-gray-900 to-black">
-        <TopBar />
-        <div className="flex-1 min-h-0 flex items-center justify-center text-gray-200">
-          <div className="bg-black/40 border border-gray-700 rounded-xl px-6 py-5 text-center">
-            <div className="text-lg font-semibold">Signing in…</div>
-            <div className="text-sm text-gray-400 mt-1">Approve the Phantom signature request</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-dvh lg:h-dvh flex flex-col bg-gradient-to-br from-gray-950 via-gray-900 to-black">
       <TopBar />
 
-      {/*
-        Responsive layout notes:
-        - Avoid hard-coding a fixed content height (100vh - X) because browser UI + mobile safe areas
-          make it unreliable and it forces awkward internal scrolling.
-        - Use flex-1 + min-h-0 so children can size/scroll correctly.
-      */}
-      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 flex-1 min-h-0 lg:overflow-hidden">
-        <LeftPanel
-          onOpenSpin={() => setIsModalOpen(true)}
-          onRefreshRewardsReady={handleRefreshRewardsReady}
-          onRoiChangeReady={handleRoiChangeReady}
-        />
+      <div className="flex-1 min-h-0 px-4 sm:px-6 lg:px-8 pb-6 pt-4">
+        {/* v2: Great Expedition only (no aliens/spaceship assignment system) */}
+        <GreatExpeditionPanel />
 
-        {/* Mobile: switch between Aliens / Spaceship without scrolling through the whole list */}
-        <div className="lg:hidden">
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <button
-              onClick={() => setMobileTab("aliens")}
-              className={`py-2 rounded-lg font-semibold border transition-colors ${
-                mobileTab === "aliens"
-                  ? "bg-cyan-500 text-black border-cyan-400"
-                  : "bg-black/40 text-gray-200 border-gray-700"
-              }`}
-            >
-              Aliens
-            </button>
-            <button
-              onClick={() => setMobileTab("ship")}
-              className={`py-2 rounded-lg font-semibold border transition-colors ${
-                mobileTab === "ship"
-                  ? "bg-cyan-500 text-black border-cyan-400"
-                  : "bg-black/40 text-gray-200 border-gray-700"
-              }`}
-            >
-              Spaceship
-            </button>
+        <div className="mt-4 rounded-xl border border-gray-800 bg-black/30 p-4 text-sm text-gray-300">
+          <div className="font-semibold text-gray-100">Crew Hangar (coming next)</div>
+          <div className="text-gray-400 text-xs mt-1">
+            We’ll repurpose the old Aliens tab into Crew progression: badges, streaks, cosmetics, and free entries — without changing luck.
           </div>
-
-          {mobileTab === "aliens" ? (
-            <AlienMenu
-              key={`aliens-m-${refreshKey}`}
-              onRoiChange={onRoiChange || undefined}
-              onAlienAssigned={() => {
-                handleRefresh();
-                if (refreshRewards) {
-                  setTimeout(() => {
-                    refreshRewards();
-                  }, 100);
-                }
-              }}
-            />
-          ) : (
-            <SpaceshipPanel
-              key={`ship-m-${refreshKey}`}
-              onRoiChange={onRoiChange || undefined}
-              onAlienUnassigned={() => {
-                handleRefresh();
-                if (refreshRewards) {
-                  setTimeout(() => {
-                    refreshRewards();
-                  }, 100);
-                }
-              }}
-            />
-          )}
-        </div>
-
-        {/* Desktop: show both side-by-side */}
-        <div className="hidden lg:block flex-1 min-h-0">
-          <AlienMenu
-            key={`aliens-${refreshKey}`}
-            onRoiChange={onRoiChange || undefined}
-            onAlienAssigned={() => {
-              handleRefresh();
-              if (refreshRewards) {
-                setTimeout(() => {
-                  refreshRewards();
-                }, 100);
-              }
-            }}
-          />
-        </div>
-
-        <div className="hidden lg:block min-h-0 basis-[34%] shrink-0">
-          <SpaceshipPanel
-            key={`ship-${refreshKey}`}
-            onRoiChange={onRoiChange || undefined}
-            onAlienUnassigned={() => {
-              handleRefresh();
-              if (refreshRewards) {
-                setTimeout(() => {
-                  refreshRewards();
-                }, 100);
-              }
-            }}
-          />
         </div>
       </div>
-
-      {isModalOpen && (
-        <SpinModal
-          onClose={() => setIsModalOpen(false)}
-          onSpinComplete={handleSpinComplete}
-        />
-      )}
     </div>
   );
 }
