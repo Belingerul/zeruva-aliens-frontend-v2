@@ -7,6 +7,7 @@ import { ensureAuth } from "../utils/ensureAuth";
 import DynamicStarfield from "./DynamicStarfield";
 import SpaceshipSlot from "./SpaceshipSlot";
 import ConfirmModal from "./ConfirmModal";
+import GreatExpeditionPanel from "./GreatExpeditionPanel";
 import {
   getShipWithSlots,
   unassignSlot,
@@ -365,43 +366,9 @@ export default function SpaceshipPanel({
           </motion.div>
         </div>
 
-        <div className="mt-2 space-y-3">
-          {!expedition?.expedition_active && planets?.length ? (
-            <div className="bg-black/30 border border-gray-800 rounded-lg p-3">
-              <div className="text-sm text-gray-300 font-semibold mb-2">Select Planet</div>
-              <select
-                value={selectedPlanet}
-                onChange={(e) => setSelectedPlanet(e.target.value)}
-                className="w-full bg-black/50 border border-gray-700 rounded-md px-3 py-2 text-gray-100"
-              >
-                {planets.map((p: any) => (
-                  <option key={p.key} value={p.key}>
-                    {p.name || p.key} (x{p.roiMult || 1})
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
-
-          <motion.button
-            whileHover={{ scale: expedition?.expedition_active ? 1 : 1.02 }}
-            whileTap={{ scale: expedition?.expedition_active ? 1 : 0.98 }}
-            onClick={handleStartExpedition}
-            disabled={expeditionWorking || expedition?.expedition_active}
-            className="w-full py-3 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold
-                     shadow-[0_0_20px_rgba(34,211,238,0.35)] hover:shadow-[0_0_30px_rgba(34,211,238,0.55)]
-                     transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {expeditionWorking
-              ? "Starting Expedition…"
-              : expedition?.expedition_active
-                ? `Expedition: ${expeditionTimerLabel}`
-                : "Start Expedition (6h)"}
-          </motion.button>
-
-          <div className="text-xs text-gray-400 text-center">
-            Earnings happen only during expeditions (assigned aliens only).
-          </div>
+        {/* v2: Great Expedition replaces the old expedition flow */}
+        <div className="mt-3">
+          <GreatExpeditionPanel />
         </div>
       </div>
     </div>

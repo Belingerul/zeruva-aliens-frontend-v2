@@ -182,6 +182,22 @@ export const startExpedition = async (planet = "planet-1") => {
   });
 };
 
+// ===== Great Expedition (v2) =====
+export const geGetCurrentRound = async () => {
+  return await apiRequest(`/v2/ge/round/current`, { method: "GET" });
+};
+
+export const geGetMe = async () => {
+  return await apiRequest(`/v2/ge/me`, { method: "GET" });
+};
+
+export const geEnter = async (ship_index: number, qty: number) => {
+  return await apiRequest(`/v2/ge/enter`, {
+    method: "POST",
+    body: JSON.stringify({ ship_index, qty }),
+  });
+};
+
 export const buySpaceship = async (
   wallet: string,
   level: number,
