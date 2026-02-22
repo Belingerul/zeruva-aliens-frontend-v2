@@ -171,6 +171,8 @@ export default function AlienMenu({
     );
   }
 
+  const visibleAliens = aliens.slice(0, 20);
+
   return (
     <>
       <ConfirmModal
@@ -183,80 +185,71 @@ export default function AlienMenu({
         secondaryText={null}
       />
 
-      <div className="flex-[1.25] rounded-xl p-6 bg-black/60 backdrop-blur-sm border border-gray-800 flex flex-col h-auto lg:h-full min-h-0">
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-white mb-1">My Aliens</h2>
-        <p className="text-sm text-gray-400">
-          Select an alien to assign to your ship
-        </p>
-      </div>
+      <div className="flex-[1.25] rounded-xl p-4 bg-black/60 backdrop-blur-sm border border-gray-800 flex flex-col h-auto lg:h-full min-h-0">
+        <div className="mb-3">
+          <h2 className="text-xl font-bold text-white mb-0.5">My Aliens</h2>
+          <p className="text-xs text-gray-400">
+            Showing {visibleAliens.length}/{aliens.length} (top 20) — sized to fit laptop screen
+          </p>
+        </div>
 
-      {/*
-        On desktop we want the list to scroll inside the panel.
-        On mobile we prefer natural page scrolling (so no “tiny scroll inside scroll”).
-      */}
-      <div className="lg:flex-1 lg:overflow-y-auto pr-2 custom-scrollbar min-h-0">
-        {aliens.length === 0 ? (
-          <div className="text-gray-400 text-center py-12">
-            <div className="text-5xl mb-4">👽</div>
-            <p>No aliens in hangar yet.</p>
-            <p className="text-sm mt-2">Spin an egg to get your first alien!</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {aliens.map((alien) => {
+        {/*
+          Dany requirement (laptop): no internal scroll, and cards smaller so everything fits.
+          If you want scrolling back later, we can re-enable lg:overflow-y-auto.
+        */}
+        <div className="pr-1 min-h-0">
+          {visibleAliens.length === 0 ? (
+            <div className="text-gray-400 text-center py-8">
+              <div className="text-4xl mb-3">👽</div>
+              <p>No aliens in hangar yet.</p>
+              <p className="text-xs mt-1">Spin an egg to get your first alien!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-2">
+              {visibleAliens.map((alien) => {
               const isAssigned = assignedAlienIds.has(alien.id);
 
               return (
                 <div
                   key={alien.id}
-                  className={`bg-gradient-to-br from-gray-900 to-black border-2 ${tierColors[alien.tier] || tierColors.Common} rounded-xl p-4 transition-shadow duration-150 ease-out hover:shadow-lg will-change-transform cv-auto ${
+                  className={`bg-gradient-to-br from-gray-900 to-black border ${tierColors[alien.tier] || tierColors.Common} rounded-lg p-2 transition-shadow duration-150 ease-out hover:shadow-md ${
                     isAssigned ? "opacity-60" : ""
                   }`}
                 >
-                  <div className="flex justify-center mb-3">
+                  <div className="flex justify-center mb-1">
                     <img
                       src={alien.image || "/placeholder.svg"}
                       alt={`Alien ${alien.alien_id || alien.id}`}
                       loading="lazy"
                       decoding="async"
-                      className="w-20 h-20 lg:w-28 lg:h-28 object-contain"
+                      className="w-10 h-10 md:w-12 md:h-12 object-contain"
                     />
                   </div>
 
-                  <div className="text-center space-y-1 mb-3">
-                    <div className="text-white text-lg lg:text-xl font-semibold">
-                      Alien #{alien.alien_id || alien.id}
+                  <div className="text-center space-y-0.5 mb-1">
+                    <div className="text-white text-[11px] md:text-xs font-semibold leading-tight">
+                      #{alien.alien_id || alien.id}
                     </div>
                     <div
-                      className={`text-base lg:text-lg font-bold ${tierColors[alien.tier]?.split(" ")[1] || "text-green-400"}`}
+                      className={`text-[11px] md:text-xs font-bold leading-tight ${tierColors[alien.tier]?.split(" ")[1] || "text-green-400"}`}
                     >
                       {alien.tier || "Common"}
                     </div>
-                    <div className="text-cyan-300 text-base lg:text-lg">
-                      {(alien.roi || 0).toFixed(1)} $ / day
+                    <div className="text-cyan-300 text-[11px] md:text-xs leading-tight">
+                      {(alien.roi || 0).toFixed(1)}/day
                     </div>
-                    {isAssigned && (
-                      <div className="text-yellow-400 text-base font-semibold">
-                        Assigned to ship
-                      </div>
-                    )}
                   </div>
 
                   <button
                     onClick={() => handleAssignToShip(alien)}
                     disabled={assigning || isAssigned}
-                    className={`w-full py-2 rounded-lg text-white text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    className={`w-full py-1 rounded-md text-white text-[11px] font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                       isAssigned
-                        ? "bg-gray-600 border border-gray-500"
+                        ? "bg-gray-700 border border-gray-600"
                         : "bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
                     }`}
                   >
-                    {isAssigned
-                      ? "Assigned to ship"
-                      : assigning
-                        ? "Assigning..."
-                        : "Assign to Ship"}
+                    {isAssigned ? "Assigned" : assigning ? "..." : "Assign"}
                   </button>
                 </div>
               );

@@ -1,8 +1,22 @@
 /** @type {import('next').NextConfig} */
+const isPages = process.env.GITHUB_PAGES === "true";
+const repo = process.env.GITHUB_REPO || "zeruva-aliens-frontend-v2";
+
 const nextConfig = {
   // In dev, React StrictMode intentionally double-invokes effects which triggers
   // multiple Phantom signature popups during login. Disable it for this app.
   reactStrictMode: false,
+
+  // GitHub Pages = static hosting. Next must export a static site.
+  ...(isPages
+    ? {
+        output: "export",
+        trailingSlash: true,
+        // Pages serves under /<repo>
+        basePath: `/${repo}`,
+        assetPrefix: `/${repo}/`,
+      }
+    : {}),
 
   typescript: {
     ignoreBuildErrors: true,
@@ -12,6 +26,11 @@ const nextConfig = {
   },
 
   async rewrites() {
+    // Rewrites only work when you have a running Next server (dev/serverful).
+    // On GitHub Pages (static export), the frontend must call the backend directly
+    // via NEXT_PUBLIC_API_BASE_URL.
+    if (isPages) return [];
+
     const backend =
       process.env.BACKEND_URL ||
       "https://zeruva-backend-production.up.railway.app";

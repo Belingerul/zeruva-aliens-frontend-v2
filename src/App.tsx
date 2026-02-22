@@ -11,6 +11,8 @@ import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import TopBar from "./components/TopBar";
 import GreatExpeditionPanel from "./components/GreatExpeditionPanel";
+import Hangar from "./components/Hangar";
+import Link from "next/link";
 import {
   clearAuthToken,
   getAuthToken,
@@ -18,6 +20,7 @@ import {
   getNonce,
   setAuthToken,
   verifySignature,
+  registerUser,
 } from "./api";
 
 // Minimal base58 encoder (avoids adding new deps)
@@ -58,6 +61,7 @@ let appLoginInFlight: Promise<void> | null = null;
 
 function AppContent() {
   const [authReady, setAuthReady] = useState(false);
+  const [tab, setTab] = useState<"expedition" | "hangar">("expedition");
   const wallet = useWallet();
 
   useEffect(() => {
@@ -152,15 +156,33 @@ function AppContent() {
     <div className="min-h-dvh lg:h-dvh flex flex-col bg-gradient-to-br from-gray-950 via-gray-900 to-black">
       <TopBar />
 
-      <div className="flex-1 min-h-0 px-4 sm:px-6 lg:px-8 pb-6 pt-4">
-        {/* v2: Great Expedition only (no aliens/spaceship assignment system) */}
-        <GreatExpeditionPanel />
+      <div className="flex-1 min-h-0 px-4 sm:px-6 lg:px-8 pb-24 pt-4">
+        {tab === "expedition" ? <GreatExpeditionPanel /> : null}
+        {tab === "hangar" ? <Hangar /> : null}
+      </div>
 
-        <div className="mt-4 rounded-xl border border-gray-800 bg-black/30 p-4 text-sm text-gray-300">
-          <div className="font-semibold text-gray-100">Crew Hangar (coming next)</div>
-          <div className="text-gray-400 text-xs mt-1">
-            We’ll repurpose the old Aliens tab into Crew progression: badges, streaks, cosmetics, and free entries — without changing luck.
-          </div>
+      {/* bottom nav */}
+      <div className="fixed bottom-0 left-0 right-0 border-t border-gray-800 bg-black/60 backdrop-blur">
+        <div className="mx-auto max-w-xl px-4 py-3 flex items-center justify-between text-sm text-gray-300">
+          <button
+            onClick={() => setTab("expedition")}
+            className={[
+              "px-3 py-2 rounded-lg",
+              tab === "expedition" ? "bg-cyan-500/15 text-cyan-200 font-semibold" : "hover:bg-white/5",
+            ].join(" ")}
+          >
+            Expedition
+          </button>
+          <button
+            onClick={() => setTab("hangar")}
+            className={[
+              "px-3 py-2 rounded-lg",
+              tab === "hangar" ? "bg-cyan-500/15 text-cyan-200 font-semibold" : "hover:bg-white/5",
+            ].join(" ")}
+          >
+            Hangar
+          </button>
+          <Link href="/about" className="px-3 py-2 rounded-lg hover:bg-white/5">About</Link>
         </div>
       </div>
     </div>

@@ -187,6 +187,18 @@ export const geGetCurrentRound = async () => {
   return await apiRequest(`/v2/ge/round/current`, { method: "GET" });
 };
 
+export const geGetSettledSummary = async (roundId?: number | null) => {
+  const q = roundId ? `?round_id=${encodeURIComponent(String(roundId))}` : "";
+  return await apiRequest(`/v2/ge/round/summary${q}`, { method: "GET" });
+};
+
+export const geGetSettledPayouts = async (limit = 20, roundId?: number | null) => {
+  const q = new URLSearchParams();
+  q.set("limit", String(limit));
+  if (roundId) q.set("round_id", String(roundId));
+  return await apiRequest(`/v2/ge/round/payouts?${q.toString()}`, { method: "GET" });
+};
+
 export const geGetMe = async () => {
   return await apiRequest(`/v2/ge/me`, { method: "GET" });
 };
@@ -195,6 +207,20 @@ export const geEnter = async (ship_index: number, qty: number) => {
   return await apiRequest(`/v2/ge/enter`, {
     method: "POST",
     body: JSON.stringify({ ship_index, qty }),
+  });
+};
+
+export const geBuyEntry = async (ship_index: number, qty: number) => {
+  return await apiRequest(`/v2/ge/buy-entry`, {
+    method: "POST",
+    body: JSON.stringify({ ship_index, qty }),
+  });
+};
+
+export const geConfirmEntry = async (intentId: string, signature: string) => {
+  return await apiRequest(`/v2/ge/confirm-entry`, {
+    method: "POST",
+    body: JSON.stringify({ intentId, signature }),
   });
 };
 
@@ -271,12 +297,25 @@ export async function verifySignature(
   });
 }
 
+const DEV_WALLET_KEY = "zeruva_dev_wallet";
+
+export function getDevWallet(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(DEV_WALLET_KEY);
+}
+
+export function setDevWallet(wallet: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(DEV_WALLET_KEY, wallet);
+}
+
 export async function apiRequest<T>(
   endpoint: string,
   options?: RequestInit,
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
   const token = typeof window !== "undefined" ? getAuthToken() : null;
+  const devWallet = typeof window !== "undefined" && !token ? getDevWallet() : null;
 
   try {
     const response = await fetch(url, {
@@ -284,6 +323,7 @@ export async function apiRequest<T>(
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(devWallet ? { "X-Dev-Wallet": devWallet } : {}),
         ...(options?.headers || {}),
       },
       // If the backend is configured with credentials, this ensures cookies would flow too.
@@ -292,6 +332,18 @@ export async function apiRequest<T>(
 
     if (!response.ok) {
       const text = await response.text();
+
+      // If backend restarted, JWT_SECRET changed, etc. token becomes invalid.
+      // Auto-clear stored token so the next action re-auths cleanly.
+      if (
+        response.status === 401 &&
+        /Invalid\/expired token|Invalid token|Missing Bearer token/i.test(text)
+      ) {
+        try {
+          clearAuthToken();
+        } catch (_) {}
+      }
+
       throw new Error(`API Error: ${response.status} - ${text}`);
     }
 
