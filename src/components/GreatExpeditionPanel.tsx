@@ -97,14 +97,50 @@ export default function GreatExpeditionPanel() {
 
   // Poll lightly so it feels live.
   // IMPORTANT: pause polling during reveal animations so the round can't change mid-reveal.
+  // Cost-efficiency: adaptive polling intervals.
   useEffect(() => {
-    const id = window.setInterval(() => {
-      if (rouletteOpen || raceOpen || winnerOpen) return;
-      refresh();
-    }, 5000);
-    return () => window.clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wallet.publicKey?.toString(), guestWallet, rouletteOpen, raceOpen, winnerOpen]);
+    let t: any = null;
+    let stopped = false;
+
+    const getIntervalMs = () => {
+      // When modal/reveals are open, don't poll.
+      if (rouletteOpen || raceOpen || winnerOpen) return 60_000;
+
+      const status = String(round?.status || "");
+      if (status === "running") {
+        // Speed up only near the end.
+        const endsAt = round?.ends_at ? new Date(round.ends_at).getTime() : null;
+        if (endsAt) {
+          const remainingMs = endsAt - Date.now();
+          if (remainingMs <= 10_000) return 2_000;
+        }
+        return 10_000;
+      }
+
+      // filling / settled / unknown
+      return 45_000;
+    };
+
+    const loop = async () => {
+      if (stopped) return;
+      try {
+        if (!(rouletteOpen || raceOpen || winnerOpen)) {
+          await refresh();
+        }
+      } finally {
+        const ms = getIntervalMs();
+        t = window.setTimeout(loop, ms);
+      }
+    };
+
+    // kick off
+    t = window.setTimeout(loop, 3_000);
+
+    return () => {
+      stopped = true;
+      if (t) window.clearTimeout(t);
+    };
+  }, [wallet.publicKey?.toString(), guestWallet, rouletteOpen, raceOpen, winnerOpen, round?.status, round?.ends_at]);
 
   const perShip = stats?.perShip || Array.from({ length: SHIPS }).map((_, i) => ({ ship_index: i, qty: 0 }));
   const filledCount = perShip.filter((s: any) => Number(s.qty) >= 1).length;
