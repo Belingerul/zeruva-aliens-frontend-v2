@@ -1,6 +1,7 @@
 "use client";
 
 import ConfirmModal from "./ConfirmModal";
+import { apiStaticUrl } from "../api";
 
 export default function WinnerModal({
   open,
@@ -30,7 +31,7 @@ export default function WinnerModal({
       <div className="flex items-center gap-3">
         {winnerAlien ? (
           <img
-            src={`/api/static/${winnerAlien}.png`}
+            src={apiStaticUrl(`static/${winnerAlien}.png`)}
             className="w-16 h-16 rounded-2xl object-cover border border-gray-800"
             alt=""
             aria-hidden="true"

@@ -8,7 +8,7 @@ import ConfirmModal from "./ConfirmModal";
 import RouletteReveal from "./RouletteReveal";
 import RaceReveal from "./RaceReveal";
 import WinnerModal from "./WinnerModal";
-import { geEnter, geBuyEntry, geConfirmEntry, geGetCurrentRound, geGetMe, geGetSettledSummary, geGetSettledPayouts, setDevWallet, getDevWallet, getAuthToken } from "../api";
+import { geEnter, geBuyEntry, geConfirmEntry, geGetCurrentRound, geGetMe, geGetSettledSummary, geGetSettledPayouts, setDevWallet, getDevWallet, getAuthToken, apiStaticUrl } from "../api";
 
 const SHIPS = 15;
 
@@ -442,6 +442,9 @@ export default function GreatExpeditionPanel() {
               The Great Expedition
             </div>
             <div className="text-xs text-gray-400">Mode: <span className="text-gray-200 font-semibold">{GAME_LABEL}</span> • 70% winner / 25% all / 5% treasury</div>
+          <div className="mt-1 text-[11px] text-gray-500 truncate">
+            Backend: <span className="text-gray-300">{process.env.NEXT_PUBLIC_API_BASE_URL || "/api"}</span>{round?.id ? <span className="text-gray-500"> • round #{round.id}</span> : null}
+          </div>
           </div>
           <div className="text-right">
             <div className="text-xs text-gray-400">Status</div>
@@ -534,7 +537,7 @@ export default function GreatExpeditionPanel() {
                     return (
                       <div className="mt-2 flex items-center justify-center">
                         <img
-                          src={`/api/static/${id}.png`}
+                          src={apiStaticUrl(`static/${id}.png`)}
                           alt=""
                           aria-hidden="true"
                           className="w-[44px] h-[44px] sm:w-[56px] sm:h-[56px] rounded-xl opacity-95"
@@ -620,9 +623,14 @@ export default function GreatExpeditionPanel() {
             </div>
 
             {/* Crew (engagement layer / future utility) */}
-            <div className="mt-4 rounded-xl border border-gray-800 bg-black/30 p-3">
-              <div className="text-sm font-semibold text-gray-200">Crew</div>
-              <div className="text-xs text-gray-400">Pick a crew loadout. (UI now; effects can be enforced later on-chain.)</div>
+            <details className="mt-4 rounded-xl border border-gray-800 bg-black/30 p-3">
+              <summary className="cursor-pointer select-none flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-gray-200">Crew</div>
+                  <div className="text-[11px] text-gray-400">Optional loadout (collapsed to keep the main screen compact).</div>
+                </div>
+                <div className="text-[11px] text-gray-500">{crew ? `Selected: ${crew}` : "Select"}</div>
+              </summary>
 
               <div className="mt-3 grid grid-cols-3 gap-2">
                 {[{
@@ -652,7 +660,7 @@ export default function GreatExpeditionPanel() {
                   </button>
                 ))}
               </div>
-            </div>
+            </details>
 
 
           </>

@@ -249,7 +249,14 @@ export const buySpaceship = async (
 // Configure backend URL via NEXT_PUBLIC_API_BASE_URL.
 // Default to same-origin `/api` so Next.js can rewrite to the real backend (see next.config.mjs).
 // This avoids browser CORS issues (especially on trycloudflare / Cloudflare Pages).
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
+
+export function apiStaticUrl(path: string): string {
+  // API_BASE_URL usually ends with /api
+  const base = String(API_BASE_URL).replace(/\/+$/, "");
+  const p = String(path || "").replace(/^\/+/, "");
+  return `${base}/${p}`;
+}
 
 // ===== Auth token storage =====
 const TOKEN_KEY = "zeruva_jwt";
@@ -358,4 +365,3 @@ export async function apiRequest<T>(
   }
 }
 
-export { API_BASE_URL };

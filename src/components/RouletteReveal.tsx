@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { motion, useAnimation } from "framer-motion";
+import { apiStaticUrl } from "../api";
 
 export default function RouletteReveal({
   alienIds,
@@ -76,7 +77,7 @@ export default function RouletteReveal({
               style={{ width: `${CELL}px`, height: `${CELL}px` }}
             >
               <img
-                src={`/api/static/${id}.png`}
+                src={apiStaticUrl(`static/${id}.png`)}
                 className="block w-[70%] h-[70%] rounded-xl object-cover shrink-0"
                 alt=""
                 aria-hidden="true"

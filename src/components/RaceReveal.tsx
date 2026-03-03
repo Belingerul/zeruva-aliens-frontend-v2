@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { apiStaticUrl } from "../api";
 
 function hash01(str: string) {
   let h = 2166136261;
@@ -60,7 +61,7 @@ export default function RaceReveal({
                 }}
               >
                 <img
-                  src={`/api/static/${l.id}.png`}
+                  src={apiStaticUrl(`static/${l.id}.png`)}
                   className="w-7 h-7 rounded-lg object-cover"
                   alt=""
                   aria-hidden="true"
