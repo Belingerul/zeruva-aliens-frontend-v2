@@ -377,6 +377,7 @@ export default function GreatExpeditionPanel() {
     const selected = i === selectedShip;
     return [
       "rounded-xl border p-2 text-center cursor-pointer select-none",
+      "flex flex-col items-center",
       "bg-gradient-to-b from-[#0b0f1a] to-black",
       filled ? "border-cyan-500/40 shadow-[0_0_0_1px_rgba(34,211,238,0.12)]" : "border-gray-800 opacity-90",
       selected ? "ring-2 ring-cyan-400" : "",
@@ -535,12 +536,12 @@ export default function GreatExpeditionPanel() {
                     const id = Array.isArray(ids) ? ids[idx] : null;
                     if (!id) return null;
                     return (
-                      <div className="mt-2 flex items-center justify-center">
+                      <div className="mt-2 w-full flex items-center justify-center">
                         <img
                           src={apiStaticUrl(`static/${id}.png`)}
                           alt=""
                           aria-hidden="true"
-                          className="w-[54px] h-[54px] sm:w-[68px] sm:h-[68px] lg:w-[76px] lg:h-[76px] rounded-2xl opacity-95 object-cover"
+                          className="w-[66px] h-[66px] sm:w-[78px] sm:h-[78px] lg:w-[88px] lg:h-[88px] rounded-2xl opacity-95 object-cover border border-gray-700 bg-black/30"
                         />
                       </div>
                     );
