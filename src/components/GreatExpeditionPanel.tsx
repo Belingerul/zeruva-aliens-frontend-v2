@@ -510,7 +510,7 @@ export default function GreatExpeditionPanel() {
               </div>
             ) : null}
 
-            <div className="mt-3 grid grid-cols-5 gap-2">
+            <div className="mt-3 grid grid-cols-5 gap-2 sm:gap-2.5">
               {Array.from({ length: SHIPS }).map((_, idx) => (
                 <div
                   key={idx}
@@ -540,7 +540,7 @@ export default function GreatExpeditionPanel() {
                           src={apiStaticUrl(`static/${id}.png`)}
                           alt=""
                           aria-hidden="true"
-                          className="w-[44px] h-[44px] sm:w-[56px] sm:h-[56px] rounded-xl opacity-95"
+                          className="w-[54px] h-[54px] sm:w-[68px] sm:h-[68px] lg:w-[76px] lg:h-[76px] rounded-2xl opacity-95 object-cover"
                         />
                       </div>
                     );
