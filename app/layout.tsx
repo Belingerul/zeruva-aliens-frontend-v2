@@ -7,9 +7,9 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.app",
+  title: "Zeruva — Alien Ecosystem on Solana",
+  description: "Hatch aliens, earn passive SOL, and compete in high-stakes expeditions. Two realms, one wallet.",
+  generator: "zeruva.app",
   icons: {
     icon: [
       {
@@ -42,8 +42,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`font-sans antialiased`}>
+    // suppressHydrationWarning: browser extensions and the iOS Phantom WKWebView
+    // inject attributes onto <html>/<body> (e.g. style="-webkit-text-size-adjust:100%")
+    // before React hydrates. This suppresses the warning for THIS element's own
+    // attributes only (not children), so real mismatches below still surface.
+    <html lang="en" suppressHydrationWarning>
+      <body className={`font-sans antialiased`} suppressHydrationWarning>
         {children}
         <Analytics />
       </body>

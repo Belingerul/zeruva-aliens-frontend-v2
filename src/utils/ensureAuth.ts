@@ -1,5 +1,7 @@
 import {
   getAuthToken,
+  getAuthWallet,
+  clearAuthToken,
   getNonce,
   setAuthToken,
   verifySignature,
@@ -17,9 +19,18 @@ export async function ensureAuth(wallet: {
   select?: (walletName: string) => void;
   signMessage?: (msg: Uint8Array) => Promise<Uint8Array>;
 }) {
-  // If we already have a JWT, nothing to do.
+  // If we have a JWT for the current wallet, reuse it.
+  // If it's for a different wallet, clear it so we re-auth as the right wallet.
   const existing = getAuthToken();
-  if (existing) return existing;
+  const storedWallet = getAuthWallet();
+  const currentWallet = wallet.publicKey?.toBase58();
+  if (existing) {
+    if (currentWallet && storedWallet && storedWallet !== currentWallet) {
+      clearAuthToken();
+    } else {
+      return existing;
+    }
+  }
 
   if (authInFlight) return await authInFlight;
 

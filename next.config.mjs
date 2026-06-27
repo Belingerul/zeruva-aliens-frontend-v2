@@ -7,6 +7,16 @@ const nextConfig = {
   // multiple Phantom signature popups during login. Disable it for this app.
   reactStrictMode: false,
 
+  // Turbopack (Next 16 default) is dramatically faster than webpack for dev
+  // cold-starts and HMR. An empty/standard config is enough here — the only
+  // webpack tweak below (stubbing pino-pretty) is for a walletconnect dep that
+  // this app doesn't actually import (only the Phantom adapter is used).
+  // `root` pins the workspace so Next stops inferring the wrong dir from a
+  // stray lockfile in the home folder.
+  turbopack: {
+    root: import.meta.dirname,
+  },
+
   // GitHub Pages = static hosting. Next must export a static site.
   ...(isPages
     ? {

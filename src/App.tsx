@@ -148,15 +148,13 @@ function AppContent() {
     };
   }, [wallet.connected, wallet.publicKey, wallet.signMessage]);
 
-  const handleRefresh = () => {
-    setRefreshKey((prev) => prev + 1);
-  };
-
   return (
-    <div className="min-h-dvh lg:h-dvh flex flex-col bg-gradient-to-br from-gray-950 via-gray-900 to-black">
-      <TopBar />
+    // min-h-dvh only (no h-dvh lock): the page must scroll when content is
+    // taller than the viewport — the locked height was clipping elements.
+    <div className="min-h-dvh flex flex-col bg-gradient-to-br from-gray-950 via-gray-900 to-black">
+      <TopBar backHref="/" title="The Great Expedition" />
 
-      <div className="flex-1 min-h-0 px-4 sm:px-6 lg:px-8 pb-24 pt-4">
+      <div className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-28 pt-4">
         {tab === "expedition" ? <GreatExpeditionPanel /> : null}
         {tab === "hangar" ? <Hangar /> : null}
       </div>
@@ -168,7 +166,7 @@ function AppContent() {
             onClick={() => setTab("expedition")}
             className={[
               "px-3 py-2 rounded-lg",
-              tab === "expedition" ? "bg-cyan-500/15 text-cyan-200 font-semibold" : "hover:bg-white/5",
+              tab === "expedition" ? "bg-yellow-500/15 text-yellow-200 font-semibold" : "hover:bg-white/5",
             ].join(" ")}
           >
             Expedition
@@ -177,7 +175,7 @@ function AppContent() {
             onClick={() => setTab("hangar")}
             className={[
               "px-3 py-2 rounded-lg",
-              tab === "hangar" ? "bg-cyan-500/15 text-cyan-200 font-semibold" : "hover:bg-white/5",
+              tab === "hangar" ? "bg-yellow-500/15 text-yellow-200 font-semibold" : "hover:bg-white/5",
             ].join(" ")}
           >
             Hangar
@@ -190,7 +188,7 @@ function AppContent() {
 }
 
 function App() {
-  const endpoint = process.env.VITE_RPC_URL || "https://api.devnet.solana.com";
+  const endpoint = process.env.NEXT_PUBLIC_RPC_URL || "https://api.devnet.solana.com";
   const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
 
   return (

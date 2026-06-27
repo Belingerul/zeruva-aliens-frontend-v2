@@ -96,7 +96,7 @@ export default function LeftPanel({
     <div className="w-full lg:w-96 xl:w-[26rem] rounded-xl p-5 lg:p-4 bg-black/60 backdrop-blur-sm border border-gray-800 h-auto lg:h-full lg:self-stretch flex flex-col gap-3 overflow-hidden">
       {/* Spin Section */}
       <div>
-        <h3 className="font-extrabold mb-2 text-gray-100 text-xl tracking-tight">
+        <h3 className="font-extrabold mb-2 text-gray-100 text-2xl tracking-tight">
           Spin an Egg
         </h3>
         <button
@@ -111,14 +111,14 @@ export default function LeftPanel({
       {/* Spaceship Section */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-extrabold text-gray-100 text-xl tracking-tight">Spaceship</h3>
-          <div className="text-xs text-gray-400">
+          <h3 className="font-extrabold text-gray-100 text-2xl tracking-tight">Spaceship</h3>
+          <div className="text-sm text-gray-400">
             {shipLoading ? "Loading…" : shipError ? "" : `Lv ${currentLevel}`}
           </div>
         </div>
 
         {shipError && (
-          <div className="text-[11px] text-red-400 mb-2">{shipError}</div>
+          <div className="text-xs text-red-400 mb-2">{shipError}</div>
         )}
 
         <button
@@ -138,22 +138,41 @@ export default function LeftPanel({
           title="Confirm Spaceship Upgrade"
           subtitle="Review the quote and sign the transaction."
           primaryText={shipBuySig ? "Confirmed" : shipBuyWorking ? "Confirming…" : "Confirm & Sign"}
-          primaryDisabled={!shipBuyQuote?.serialized || shipBuyWorking || !!shipBuySig}
+          primaryDisabled={(!shipBuyQuote?.serialized && !shipBuyQuote?.devSkip) || shipBuyWorking || !!shipBuySig}
           onPrimary={async () => {
-            if (!shipBuyQuote?.serialized) return;
-            if (!wallet.signTransaction) {
-              setShipError("Wallet doesn't support transaction signing");
+            if (!shipBuyQuote) return;
+            setShipBuyWorking(true);
+            setShipError(null);
+
+            // Dev skip: no wallet signing needed
+            if (shipBuyQuote.devSkip) {
+              try {
+                const { confirmBuySpaceship } = await import("../api");
+                const devSig = `dev-skip-${Date.now()}`;
+                await confirmBuySpaceship(shipBuyQuote.level, devSig, shipBuyQuote.intentId);
+                setShipBuySig(devSig);
+                window.dispatchEvent(new Event("zeruva_ship_changed"));
+                await refreshShip();
+              } catch (e: any) {
+                setShipError(e?.message || "Upgrade failed");
+              } finally {
+                setShipBuyWorking(false);
+              }
               return;
             }
 
-            setShipBuyWorking(true);
-            setShipError(null);
+            if (!shipBuyQuote.serialized) return;
+            if (!wallet.signTransaction) {
+              setShipError("Wallet doesn't support transaction signing");
+              setShipBuyWorking(false);
+              return;
+            }
 
             try {
               const { Transaction, Connection } = await import("@solana/web3.js");
               const { confirmBuySpaceship } = await import("../api");
               const connection = new Connection(
-                process.env.VITE_RPC_URL || "https://api.devnet.solana.com",
+                process.env.NEXT_PUBLIC_RPC_URL || "https://api.devnet.solana.com",
                 "confirmed",
               );
 
@@ -209,7 +228,7 @@ export default function LeftPanel({
           </div>
         </ConfirmModal>
 
-        <div className="mt-2 text-[11px] text-gray-400 leading-snug">
+        <div className="mt-2 text-xs text-gray-400 leading-snug">
           {currentLevel >= 3
             ? "Your ship is at max level."
             : "Upgrades increase your available alien slots."}

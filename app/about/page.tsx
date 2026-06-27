@@ -15,8 +15,8 @@ export default function AboutPage() {
           </div>
 
           <div className="mt-3 text-sm text-gray-300">
-            <span className="font-semibold text-gray-100">Tokenomics:</span> 70% winner bucket, 25% participation bucket,
-            5% treasury.
+            <span className="font-semibold text-gray-100">Tokenomics:</span> winner-take-all — the wallets on the winning
+            ship split 95% of the whole pot, 5% treasury. Losers forfeit their stake.
           </div>
 
           <div className="mt-3 text-sm text-gray-300">

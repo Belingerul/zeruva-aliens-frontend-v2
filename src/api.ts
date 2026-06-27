@@ -246,6 +246,131 @@ export const buySpaceship = async (
   });
 };
 
+// ===== Marketplace =====
+
+export interface MarketplaceListing {
+  id: number;
+  seller_wallet: string;
+  alien_db_id: number;
+  alien_id: number;
+  tier: string;
+  roi: number;
+  image: string;
+  nft_mint: string | null;
+  price_sol: number;
+  listed_at: string;
+  status?: string; // 'active' | 'pending_escrow' (only the seller sees pending)
+}
+
+export const getMarketplaceListings = async (): Promise<MarketplaceListing[]> =>
+  apiRequest<MarketplaceListing[]>("/marketplace/listings");
+
+export const getMyMarketplaceListings = async (): Promise<MarketplaceListing[]> =>
+  apiRequest<MarketplaceListing[]>("/marketplace/my-listings");
+
+// Public (no JWT needed) — a wallet's own active + pending listings. Used so
+// "My Listings" survives a refresh before the wallet re-authenticates.
+export const getListingsBySeller = async (wallet: string): Promise<MarketplaceListing[]> =>
+  apiRequest<MarketplaceListing[]>(`/marketplace/listings-by-seller?wallet=${encodeURIComponent(wallet)}`);
+
+export const listAlienForSale = async (alienDbId: number, priceSol: number) =>
+  apiRequest<{ ok: boolean; listingId: number; escrow?: boolean; serialized?: string }>(
+    "/marketplace/list",
+    {
+      method: "POST",
+      body: JSON.stringify({ alienDbId, priceSol }),
+    },
+  );
+
+export const confirmListing = async (listingId: number) =>
+  apiRequest<{ ok: boolean }>("/marketplace/confirm-list", {
+    method: "POST",
+    body: JSON.stringify({ listingId }),
+  });
+
+export const unlistAlien = async (listingId: number) =>
+  apiRequest<{ ok: boolean }>("/marketplace/unlist", {
+    method: "POST",
+    body: JSON.stringify({ listingId }),
+  });
+
+export const buyListing = async (listingId: number) =>
+  apiRequest<{
+    devSkip?: boolean;
+    serialized?: string;
+    intentId: string;
+    priceSol: number;
+    lamports: number;
+    sellerWallet: string;
+    expiresAt: string;
+  }>("/marketplace/buy", {
+    method: "POST",
+    body: JSON.stringify({ listingId }),
+  });
+
+export const confirmBuyListing = async (
+  listingId: number,
+  intentId: string,
+  signature: string | null,
+) =>
+  apiRequest<{ ok: boolean; alienDbId: number }>("/marketplace/confirm-buy", {
+    method: "POST",
+    body: JSON.stringify({ listingId, intentId, signature }),
+  });
+
+// ===== Void Arena (Realm IV) =====
+
+export const geGetBalance = async (): Promise<{ ok: boolean; wallet: string; balance: number }> =>
+  apiRequest("/v2/ge/balance");
+
+export const arenaStats = async (): Promise<{
+  ok: boolean;
+  players: number;
+  total_bounty_sol: number;
+  min_stake_sol?: number;
+  max_stake_sol?: number;
+}> => apiRequest("/v2/arena/stats");
+
+export const arenaDeposit = async (sol: number) =>
+  apiRequest<{
+    devSkip?: boolean;
+    serialized?: string;
+    intentId: string;
+    lamports: number;
+    expiresAt: string;
+  }>("/v2/arena/deposit", {
+    method: "POST",
+    body: JSON.stringify({ sol }),
+  });
+
+export const arenaConfirmDeposit = async (intentId: string, signature: string | null) =>
+  apiRequest<{ ok: boolean; credited: number }>("/v2/arena/confirm-deposit", {
+    method: "POST",
+    body: JSON.stringify({ intentId, signature }),
+  });
+
+export const arenaDevTopup = async () =>
+  apiRequest<{ ok: boolean; balance: number }>("/v2/arena/dev-topup", { method: "POST" });
+
+export const arenaWithdraw = async (sol: number) =>
+  apiRequest<{ ok: boolean; signature: string; withdrawn: number; balance: number }>(
+    "/v2/arena/withdraw",
+    { method: "POST", body: JSON.stringify({ sol }) },
+  );
+
+export const arenaLeaderboard = async (): Promise<
+  { name: string; bounty: number; kills: number; alienId: number | null }[]
+> => {
+  const r = await apiRequest<{
+    ok: boolean;
+    leaderboard: { name: string; bounty: number; kills: number; alienId: number | null }[];
+  }>("/v2/arena/leaderboard");
+  return r.leaderboard || [];
+};
+
+export const getSolUsd = async (): Promise<{ ok: boolean; solUsd: number }> =>
+  apiRequest("/price/sol-usd");
+
 // Configure backend URL via NEXT_PUBLIC_API_BASE_URL.
 // Default to same-origin `/api` so Next.js can rewrite to the real backend (see next.config.mjs).
 // This avoids browser CORS issues (especially on trycloudflare / Cloudflare Pages).

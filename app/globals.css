@@ -1,9 +1,576 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Page is always black — stops white showing on mobile overscroll / around
+   the fixed-height hub root. */
+html,
+body {
+  background: #000;
+}
 
 @keyframes zeruva-fly {
   0% { transform: translate3d(0px, 0px, 0px) rotate(-10deg); }
   50% { transform: translate3d(-18px, -10px, 0px) rotate(-12deg); }
   100% { transform: translate3d(0px, 0px, 0px) rotate(-10deg); }
+}
+
+/* ===== Hub landing page ===== */
+
+@keyframes hub-rise {
+  from { opacity: 0; transform: translateY(28px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes zeruva-shimmer {
+  to { background-position: 250% center; }
+}
+
+@keyframes hub-aurora {
+  0%   { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 0.7; }
+  33%  { transform: translate(60px, -40px) scale(1.15) rotate(8deg); opacity: 1; }
+  66%  { transform: translate(-50px, 30px) scale(0.95) rotate(-6deg); opacity: 0.8; }
+  100% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 0.7; }
+}
+
+@keyframes hub-pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6); }
+  50%      { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+}
+
+@keyframes hub-float {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%      { transform: translateY(-10px) rotate(3deg); }
+}
+
+@keyframes hub-beam {
+  0%, 100% { transform: scaleX(0.6); opacity: 0.7; }
+  50%      { transform: scaleX(1); opacity: 1; }
+}
+
+@keyframes hub-grid-scroll {
+  from { transform: translateY(0); }
+  to   { transform: translateY(64px); }
+}
+
+.hub-rise {
+  opacity: 0;
+  animation: hub-rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+/* Full-viewport hub that never scrolls: the root is exactly one screen tall
+   and clips; everything inside is sized with vh/vw clamps so it always fits. */
+.hub-root {
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+}
+
+/* All decorative background layers live here — fixed to the viewport so they
+   stay put while the page scrolls, and clipped so nothing spills off-screen. */
+.hub-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hub-inner {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 1320px;
+  height: 100%;
+  margin: 0 auto;
+  padding: clamp(12px, 2.4vh, 26px) clamp(14px, 3vw, 30px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* Bigger inter-section gaps push ZERUVA toward the top and the 198 chip
+     toward the bottom while the cards stay centered (still one screen). */
+  gap: clamp(14px, 4.2vh, 48px);
+}
+
+.hub-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.hub-title {
+  font-size: clamp(44px, min(8.5vw, 10.5vh), 90px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 0.95;
+  margin: 0;
+}
+
+.hub-tagline {
+  margin: clamp(12px, 2.2vh, 22px) 0 0;
+  color: #b3bccb;
+  font-size: clamp(11px, 1.5vw, 15px);
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.hub-logo {
+  width: auto;
+  height: clamp(76px, 11.5vh, 132px);
+  display: block;
+  margin: clamp(3px, 0.6vh, 8px) auto clamp(2px, 0.6vh, 8px);
+  filter: drop-shadow(0 0 34px rgba(124, 58, 237, 0.5));
+}
+
+.zeruva-wordmark {
+  background: linear-gradient(100deg, #67e8f9, #a78bfa 30%, #f0abfc 50%, #fcd34d 72%, #67e8f9 100%);
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: zeruva-shimmer 7s linear infinite;
+  /* Single drop-shadow (was two). The shimmer animates background-position,
+     so the whole wordmark — including its filter — repaints every frame;
+     two stacked blur filters doubled that per-frame cost. */
+  filter: drop-shadow(0 0 30px rgba(120, 150, 240, 0.34));
+}
+
+.hub-aurora {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  /* No filter: blur() — the radial gradients are already soft, and large
+     animated blur layers are brutal on weak GPUs. */
+  animation: hub-aurora 18s ease-in-out infinite;
+  z-index: 1;
+  will-change: transform, opacity;
+}
+
+/* Perspective grid floor. The scroll is done with a transform on ::before
+   (compositor-only) instead of repainting background-position every frame. */
+.hub-grid-floor {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: 0;
+  height: 42vh;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+  transform: perspective(420px) rotateX(62deg);
+  transform-origin: bottom center;
+  mask-image: linear-gradient(to top, rgba(0,0,0,0.7), transparent 85%);
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.7), transparent 85%);
+}
+
+.hub-grid-floor::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -64px;
+  bottom: 0;
+  background-image:
+    linear-gradient(rgba(139, 92, 246, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.18) 1px, transparent 1px);
+  background-size: 64px 64px;
+  animation: hub-grid-scroll 3.2s linear infinite;
+  will-change: transform;
+}
+
+/* Realm cards: 2×2 on phones/tablets, one row of 4 on desktop */
+.hub-realm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(10px, 1.5vw, 18px);
+  width: 100%;
+}
+
+@media (min-width: 1180px) {
+  .hub-realm-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+.hub-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 17px;
+  border-radius: 999px;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  background: rgba(6, 50, 38, 0.55);
+  color: #6ee7b7;
+  font-size: clamp(11px, 1.3vw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  /* backdrop-filter removed — it re-blurred the animated starfield every frame. */
+}
+
+.hub-live-pill .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34d399;
+  animation: hub-pulse-dot 2s ease-out infinite;
+}
+
+.hub-beam {
+  margin: clamp(8px, 1.4vh, 14px) auto 0;
+  height: 3px;
+  width: clamp(150px, 22vw, 230px);
+  border-radius: 99px;
+  background: linear-gradient(90deg, transparent, #06b6d4, #8b5cf6, #f0abfc, transparent);
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.7);
+  animation: hub-beam 3.5s ease-in-out infinite;
+}
+
+/* Realm cards: accent color comes from --accent, tilt from --rx/--ry,
+   pointer-tracking glow from --mx/--my (set by JS). */
+.realm-card {
+  --rx: 0deg;
+  --ry: 0deg;
+  --mx: 50%;
+  --my: 50%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border-radius: 20px;
+  padding: clamp(14px, 2vh, 24px) clamp(14px, 1.6vw, 24px);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background:
+    radial-gradient(560px circle at var(--mx) var(--my),
+      color-mix(in srgb, var(--accent) 11%, transparent), transparent 45%),
+    linear-gradient(160deg, color-mix(in srgb, var(--accent) 12%, transparent), rgba(3, 5, 14, 0.94));
+  /* NO backdrop-filter. Four cards each blurring the animated starfield +
+     auroras behind them forced a full GPU re-blur every frame — the single
+     biggest source of hub jank. The ~0.94 opaque base below already hides the
+     backdrop, so the blur was doing almost nothing visually. */
+  overflow: hidden;
+  cursor: pointer;
+  transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 0.15s ease-out, border-color 0.3s ease, box-shadow 0.3s ease;
+  will-change: transform;
+}
+
+.realm-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 80%, white 6%);
+  box-shadow:
+    0 0 50px color-mix(in srgb, var(--accent) 24%, transparent),
+    0 24px 70px rgba(0, 0, 0, 0.55);
+}
+
+/* Shine sweep */
+.realm-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg,
+    transparent 40%,
+    color-mix(in srgb, var(--accent) 14%, white 8%) 50%,
+    transparent 60%);
+  transform: translateX(-120%);
+  transition: transform 0.7s ease;
+  pointer-events: none;
+}
+
+.realm-card:hover::after {
+  transform: translateX(120%);
+}
+
+.realm-card .corner-glow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 32%, transparent) 0%, transparent 70%);
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.realm-card .realm-icon {
+  line-height: 0;
+  filter: drop-shadow(0 0 16px color-mix(in srgb, var(--accent) 80%, transparent));
+  animation: hub-float 5s ease-in-out infinite;
+}
+
+.realm-card .realm-icon-img {
+  width: clamp(60px, min(7vw, 9vh), 92px);
+  height: clamp(60px, min(7vw, 9vh), 92px);
+  object-fit: contain;
+  display: block;
+}
+
+.realm-label {
+  margin-top: clamp(8px, 1.4vh, 14px);
+  font-size: clamp(10px, 1vw, 12.5px);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  opacity: 0.9;
+}
+
+/* Fixed-height bands so every realm card lines up identically: a 1-line and a
+   2-line title both occupy two lines, so the description / facts / CTA below
+   them start at the same y in all four cards. */
+.realm-title {
+  margin: 4px 0 0;
+  min-height: 2.24em; /* 2 lines @ line-height 1.12 */
+  font-size: clamp(18px, 1.5vw, 24px);
+  font-weight: 800;
+  line-height: 1.12;
+  color: #fff;
+  text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.realm-desc {
+  margin: 0; /* lifted: description + facts sit a little higher under the title */
+  min-height: 3em; /* 2 lines @ line-height 1.5 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  color: #aeb7c5;
+  font-size: clamp(13.5px, 1vw, 15.5px);
+  line-height: 1.5;
+}
+
+.realm-tags {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-content: flex-start;
+  gap: 6px;
+  width: 100%;
+  min-height: 58px; /* fixed 2×2 facts band — identical across every realm */
+  margin-top: clamp(8px, 1.4vh, 14px);
+}
+
+.realm-card .realm-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: clamp(6px, 1vh, 10px);
+  font-weight: 800;
+  font-size: clamp(14px, 1.1vw, 16px);
+  letter-spacing: 0.03em;
+  color: var(--accent-text);
+}
+
+.realm-card .realm-cta .arrow {
+  font-size: 18px;
+  transition: transform 0.25s ease;
+}
+
+.realm-card:hover .realm-cta .arrow {
+  transform: translateX(6px);
+}
+
+.realm-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 6px 8px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+  color: var(--accent-text);
+  font-size: clamp(11px, 0.82vw, 13px);
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.hub-facts {
+  display: flex;
+  justify-content: center;
+}
+
+.hub-fact-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: clamp(8px, 1.2vh, 12px) clamp(16px, 2vw, 24px);
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(15, 23, 42, 0.45);
+  color: #d7dee9;
+  font-size: clamp(15px, 1.9vw, 20px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  /* backdrop-filter removed — re-blurred the animated starfield every frame. */
+}
+
+.hub-fact-glyph {
+  width: clamp(34px, 4.6vw, 48px);
+  height: clamp(34px, 4.6vw, 48px);
+  object-fit: contain;
+  display: inline-block;
+}
+
+.hub-fact-num {
+  font-weight: 900;
+  background: linear-gradient(100deg, #67e8f9, #a78bfa 55%, #f0abfc);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Phones: 2×2 compact tiles — drop the long copy/tags so all four fit
+   on one screen with no scroll. */
+@media (max-width: 639px) {
+  /* Phone: single-column cards; the page scrolls normally while the fixed
+     .hub-bg keeps the starfield locked to the viewport (no scroll glitch).
+     .hub-root stays overflow:hidden (height auto) so nothing spills sideways. */
+  .hub-root {
+    height: auto;
+    min-height: 100dvh;
+  }
+  .hub-inner {
+    height: auto;
+    justify-content: flex-start;
+    padding: 40px 20px calc(40px + env(safe-area-inset-bottom));
+    gap: 22px;
+  }
+  .hub-realm-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .hub-title {
+    font-size: clamp(44px, 14vw, 62px);
+  }
+  .realm-card {
+    padding: 24px 20px;
+  }
+  .realm-card .realm-icon-img {
+    width: 78px;
+    height: 78px;
+  }
+}
+
+/* Kill the ugly number-input spinner arrows everywhere */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ===== Void Arena ===== */
+
+@keyframes arena-rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes arena-pop {
+  0%   { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+@keyframes arena-feed-in {
+  from { opacity: 0; transform: translateX(-14px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes arena-flash-kf {
+  0%   { background: rgba(239, 68, 68, 0.4); }
+  100% { background: rgba(239, 68, 68, 0); }
+}
+
+@keyframes arena-cta-glow {
+  0%, 100% { box-shadow: 0 0 18px rgba(239, 68, 68, 0.35); }
+  50%      { box-shadow: 0 0 34px rgba(245, 158, 11, 0.5); }
+}
+
+.arena-rise { animation: arena-rise 0.35s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.arena-pop { animation: arena-pop 0.25s ease-out; }
+.arena-feed-item { animation: arena-feed-in 0.25s ease-out; }
+.arena-flash { animation: arena-flash-kf 0.6s ease-out forwards; }
+.arena-cta { animation: arena-cta-glow 2.4s ease-in-out infinite; }
+
+/* ── Premium tabbed lobby (Void Arena redesign) ── */
+.arena-wordmark {
+  background: linear-gradient(90deg, #f43f5e, #a855f7, #22d3ee, #f43f5e);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: zeruva-shimmer 7s linear infinite;
+}
+@keyframes arena-panel-border {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(168,85,247,0.30), 0 30px 80px -34px rgba(168,85,247,0.50); }
+  50%      { box-shadow: 0 0 0 1px rgba(34,211,238,0.32), 0 30px 90px -30px rgba(244,63,94,0.45); }
+}
+.arena-panel { animation: arena-panel-border 7s ease-in-out infinite; }
+.arena-tab { position: relative; transition: color 160ms ease, background 160ms ease, transform 100ms ease; }
+.arena-tab:active { transform: translateY(1px); }
+.arena-tab--active::after {
+  content: ""; position: absolute; left: 18%; right: 18%; bottom: -1px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, #f43f5e, #a855f7, #22d3ee);
+}
+.arena-grad-btn {
+  background: linear-gradient(110deg, #e11d48, #a21caf, #4f46e5);
+  background-size: 200% auto;
+  animation: zeruva-shimmer 5s linear infinite;
+  box-shadow: 0 12px 36px -12px rgba(168,85,247,0.7);
+}
+.arena-grad-btn:hover { filter: brightness(1.1); }
+@media (prefers-reduced-motion: reduce) {
+  .arena-wordmark, .arena-panel, .arena-grad-btn { animation: none; }
+}
+
+/* ===== Great Expedition ===== */
+@keyframes ge-panel-glow {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.22), 0 0 50px -14px rgba(139, 92, 246, 0.45); }
+  50%      { box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.30), 0 0 60px -10px rgba(34, 211, 238, 0.45); }
+}
+.ge-panel { animation: ge-panel-glow 6s ease-in-out infinite; }
+
+@keyframes ge-lobby-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.03); }
+}
+.ge-lobby-pulse { animation: ge-lobby-pulse 2.2s ease-in-out infinite; }
+
+.ge-capsule { transition: transform 200ms cubic-bezier(0.2, 0.7, 0.2, 1), border-color 200ms ease, box-shadow 200ms ease; }
+.ge-capsule:hover { transform: translateY(-3px) scale(1.02); }
+.ge-capsule-selected {
+  border-color: rgba(34, 211, 238, 0.7) !important;
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.45), 0 0 26px -6px rgba(34, 211, 238, 0.55);
+}
+
+@keyframes ge-winner-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.6); }
+  50%      { box-shadow: 0 0 0 9px rgba(250, 204, 21, 0); }
+}
+.ge-winner { animation: ge-winner-pulse 1.2s ease-out infinite; border-color: rgba(250, 204, 21, 0.85) !important; }
+
+.ge-cta {
+  background: linear-gradient(90deg, #7c3aed, #06b6d4, #7c3aed);
+  background-size: 200% auto;
+  animation: zeruva-shimmer 6s linear infinite;
+  box-shadow: 0 8px 30px -8px rgba(124, 58, 237, 0.7);
+}
+.ge-cta:hover { filter: brightness(1.12); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-rise, .zeruva-wordmark, .hub-aurora, .hub-grid-floor,
+  .hub-beam, .realm-card .realm-icon, .hub-live-pill .dot,
+  .ge-panel, .ge-lobby-pulse, .ge-winner, .ge-cta {
+    animation: none;
+  }
+  .hub-rise { opacity: 1; }
 }

@@ -42,9 +42,6 @@ export default function GreatExpeditionPanel() {
   // UI uses SOL amount; backend uses qty entries.
   const [solAmount, setSolAmount] = useState<number>(0.2);
 
-  const GAME_MODE = (round as any)?.game_mode || "roulette";
-  const GAME_LABEL = GAME_MODE === "race" ? "Alien Race" : GAME_MODE === "elimination" ? "Alien Gauntlet" : "Alien Roulette";
-
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState("Great Expedition");
   const [modalMsg, setModalMsg] = useState<string>("");
@@ -76,8 +73,14 @@ export default function GreatExpeditionPanel() {
       const hasJwt = typeof window !== "undefined" ? !!getAuthToken() : false;
 
       if (guestWallet || (wallet.publicKey && hasJwt)) {
-        const me: any = await geGetMe();
-        setMy(me?.my || []);
+        try {
+          const me: any = await geGetMe();
+          setMy(me?.my || []);
+        } catch {
+          // Not authed yet (or guest mode disabled in devnet) — this is expected,
+          // don't surface a blocking error modal. Just show no personal entries.
+          setMy([]);
+        }
       } else {
         setMy([]);
       }
@@ -248,8 +251,8 @@ export default function GreatExpeditionPanel() {
             },
             pot_sol: potSol,
             distributed_total: potSol,
-            winner_pot: (potSol * 0.7),
-            participation_pot: (potSol * 0.25),
+            winner_pot: (potSol * 0.95),
+            participation_pot: 0,
             treasury_cut: (potSol * 0.05),
             participants: 0,
           };
@@ -376,12 +379,12 @@ export default function GreatExpeditionPanel() {
     const filled = q >= 1;
     const selected = i === selectedShip;
     return [
-      "rounded-xl border p-2 text-center cursor-pointer select-none",
+      "ge-capsule rounded-xl border p-2 text-center cursor-pointer select-none",
       "flex flex-col items-center",
       "bg-gradient-to-b from-[#0b0f1a] to-black",
       filled ? "border-cyan-500/40 shadow-[0_0_0_1px_rgba(34,211,238,0.12)]" : "border-gray-800 opacity-90",
-      selected ? "ring-2 ring-cyan-400" : "",
-      winnerShip === i ? "shadow-[0_0_24px_rgba(250,204,21,0.18)]" : "",
+      selected ? "ge-capsule-selected" : "",
+      winnerShip === i ? "ge-winner" : "",
     ].join(" ");
   };
 
@@ -425,7 +428,7 @@ export default function GreatExpeditionPanel() {
         </div>
       ) : null}
 
-      <div className="relative overflow-hidden rounded-xl border border-purple-500/30 bg-black/50 p-4">
+      <div className="ge-panel relative overflow-hidden rounded-2xl border border-purple-500/30 bg-black/50 p-4 sm:p-5">
         {/* subtle flying spaceship background */}
         <img
           src="/images/spaceship-new.png"
@@ -437,53 +440,60 @@ export default function GreatExpeditionPanel() {
             animation: "zeruva-fly 12s ease-in-out infinite",
           }}
         />
-        <div className="flex items-center justify-between">
+        <div className="relative flex items-start justify-between gap-3">
           <div>
-            <div className="text-xl font-extrabold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+            <div className="zeruva-wordmark text-2xl sm:text-3xl font-extrabold tracking-tight">
               The Great Expedition
             </div>
-            <div className="text-xs text-gray-400">Mode: <span className="text-gray-200 font-semibold">{GAME_LABEL}</span> • 70% winner / 25% all / 5% treasury</div>
-          <div className="mt-1 text-[11px] text-gray-500 truncate">
-            Backend: <span className="text-gray-300">{process.env.NEXT_PUBLIC_API_BASE_URL || "/api"}</span>{round?.id ? <span className="text-gray-500"> • round #{round.id}</span> : null}
           </div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs text-gray-400">Status</div>
-            <div className="text-sm font-semibold text-gray-200">{statusLabel}</div>
-            {mounted && round?.status === "running" && countdown ? (
-              <div className="text-xs text-cyan-300">Ends in {countdown}</div>
-            ) : null}
+          <div className="shrink-0">
+            {round?.status === "running" ? (
+              <span className="hub-live-pill"><span className="dot" />LIVE{mounted && countdown ? ` · ${countdown}` : ""}</span>
+            ) : round?.status === "filling" ? (
+              <span className="hub-live-pill" style={{ borderColor: "rgba(34,211,238,0.35)", background: "rgba(8,38,54,0.55)", color: "#67e8f9" }}><span className="dot" style={{ background: "#22d3ee" }} />LOBBY</span>
+            ) : round?.status === "settled" ? (
+              <span className="hub-live-pill" style={{ borderColor: "rgba(250,204,21,0.4)", background: "rgba(50,40,6,0.55)", color: "#fcd34d" }}><span className="dot" style={{ background: "#facc15" }} />RESULT</span>
+            ) : (
+              <span className="hub-live-pill" style={{ borderColor: "rgba(120,120,120,0.3)", background: "rgba(20,20,24,0.5)", color: "#9ca3af" }}>—</span>
+            )}
           </div>
         </div>
 
-        {/* ore.supply-style header cards */}
+        {round?.status === "filling" ? (
+          <div className="ge-lobby-pulse mt-4 rounded-xl border border-cyan-500/30 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 p-3 text-center">
+            <div className="text-sm font-bold text-cyan-200">Waiting for players…</div>
+            <div className="text-[11px] text-gray-400 mt-0.5">Be the first to deploy — the countdown starts the moment one alien boards.</div>
+          </div>
+        ) : null}
+
+        {/* prize pool + timer */}
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div className="rounded-xl border border-yellow-500/40 bg-black/40 p-3 overflow-hidden">
             <div className="text-xl sm:text-2xl font-bold text-gray-100 tabular-nums truncate">
               {(Number(stats?.totalEntries || 0) * Number(config?.entry_price_sol || 0.1)).toFixed(2)}
             </div>
-            <div className="text-xs text-gray-400">Expedition Pool (SOL)</div>
+            <div className="text-xs text-gray-400">Prize Pool (SOL)</div>
           </div>
           <div className="rounded-xl border border-gray-800 bg-black/30 p-3 overflow-hidden">
             <div className="text-xl sm:text-2xl font-bold text-gray-100 tabular-nums truncate">
-              {mounted && countdown ? countdown : "--:--:--"}
+              {round?.status === "filling" ? "Lobby" : (mounted && countdown ? countdown : "--:--:--")}
             </div>
-            <div className="text-xs text-gray-400">Time remaining</div>
+            <div className="text-xs text-gray-400">{round?.status === "filling" ? "Starts on first deploy" : "Time remaining"}</div>
           </div>
         </div>
 
         <div className="mt-2 grid grid-cols-2 gap-2">
           <div className="rounded-xl border border-gray-800 bg-black/20 p-3 overflow-hidden">
             <div className="text-base sm:text-lg font-semibold text-gray-100 tabular-nums truncate">
-              {(Number(stats?.totalEntries || 0) * Number(config?.entry_price_sol || 0.1)).toFixed(2)}
+              {filledCount}/{SHIPS}
             </div>
-            <div className="text-xs text-gray-400">Total deployed</div>
+            <div className="text-xs text-gray-400">Ships boarded</div>
           </div>
           <div className="rounded-xl border border-gray-800 bg-black/20 p-3 overflow-hidden">
             <div className="text-base sm:text-lg font-semibold text-gray-100 tabular-nums truncate">
               {(Number(myTotal || 0) * Number(config?.entry_price_sol || 0.1)).toFixed(2)}
             </div>
-            <div className="text-xs text-gray-400">You deployed</div>
+            <div className="text-xs text-gray-400">You deployed (SOL)</div>
           </div>
         </div>
 
@@ -515,7 +525,7 @@ export default function GreatExpeditionPanel() {
               {Array.from({ length: SHIPS }).map((_, idx) => (
                 <div
                   key={idx}
-                  className={[shipCellClass(idx), winnerShip === idx ? "ring-2 ring-yellow-400" : ""].join(" ")}
+                  className={shipCellClass(idx)}
                   onClick={() => setSelectedShip(idx)}
                   style={{
                     transition: "opacity 300ms ease, transform 300ms ease",
@@ -541,28 +551,14 @@ export default function GreatExpeditionPanel() {
                           src={apiStaticUrl(`static/${id}.png`)}
                           alt=""
                           aria-hidden="true"
-                          className="w-[66px] h-[66px] sm:w-[78px] sm:h-[78px] lg:w-[88px] lg:h-[88px] rounded-2xl opacity-95 object-cover border border-gray-700 bg-black/30"
+                          className="block aspect-square w-full max-w-[66px] sm:max-w-[78px] lg:max-w-[88px] shrink-0 rounded-2xl opacity-95 object-cover border border-gray-700 bg-black/30"
                         />
                       </div>
                     );
                   })()}
 
                   <div className="mt-2 text-base sm:text-lg font-bold text-white tabular-nums truncate">
-                    {(() => {
-                      const base = Number(perShip?.[idx]?.qty || 0) * Number(config?.entry_price_sol || 0.1);
-                      // Visual-only "natural" cents: deterministic jitter while keeping 2 decimals.
-                      // Does NOT affect pot / payouts.
-                      const seedStr = `${round?.id || 0}:${idx}:${Number(perShip?.[idx]?.qty || 0)}`;
-                      let h = 2166136261;
-                      for (let i = 0; i < seedStr.length; i++) {
-                        h ^= seedStr.charCodeAt(i);
-                        h = Math.imul(h, 16777619);
-                      }
-                      const jitter = (((h >>> 0) % 1000) / 1000 - 0.5) * 0.08; // [-0.04..+0.04]
-                      const entryPrice = Number(config?.entry_price_sol || 0.1);
-                      const minShown = base > 0 ? Math.max(entryPrice, base + jitter) : 0;
-                      return minShown.toFixed(2);
-                    })()}
+                    {(Number(perShip?.[idx]?.qty || 0) * Number(config?.entry_price_sol || 0.1)).toFixed(2)}
                   </div>
 
                   <div className="text-[10px] text-gray-500">SOL deployed</div>
@@ -612,15 +608,11 @@ export default function GreatExpeditionPanel() {
                 <button
                   onClick={board}
                   disabled={boarding}
-                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold disabled:opacity-60"
+                  className="ge-cta px-4 py-1.5 sm:px-5 sm:py-2.5 rounded-xl text-white font-bold disabled:opacity-60"
                 >
-                  {boarding ? "…" : "Board"}
+                  {boarding ? "Boarding…" : `Board · ${solAmount} SOL`}
                 </button>
               </div>
-            </div>
-
-            <div className="mt-2 text-xs text-gray-400">
-              You deployed: <span className="text-gray-200 font-semibold">{(myTotal * Number(config?.entry_price_sol || 0.1)).toFixed(2)}</span> SOL
             </div>
 
             {/* Crew (engagement layer / future utility) */}

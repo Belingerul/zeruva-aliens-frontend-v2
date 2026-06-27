@@ -126,31 +126,31 @@ const RewardsCard = forwardRef<
     <div className="w-full rounded-xl p-5 bg-black/60 border border-gray-800 flex flex-col gap-3">
       <div className="flex items-center gap-4">
         {/* Circle with live earnings */}
-        <div className="w-32 h-32 rounded-full border border-cyan-500/60 flex flex-col items-center justify-center bg-black/60 shrink-0">          <div className="text-lg text-gray-200 font-semibold relative -top-1">
+        <div className="w-36 h-36 rounded-full border border-cyan-500/60 flex flex-col items-center justify-center bg-black/60 shrink-0">          <div className="text-xl text-gray-200 font-semibold relative -top-1">
             Earnings
           </div>
-          <div className="text-[24px] leading-none font-bold text-white">
+          <div className="text-[28px] leading-none font-bold text-white">
             ${(livePoints ?? 0).toFixed(4)}
           </div>
-          <div className="text-[11px] text-gray-400 mt-1">Live</div>
+          <div className="text-xs text-gray-400 mt-1">Live</div>
         </div>
 
         <div className="flex flex-col text-gray-300 gap-1 min-w-0">
-          <div className="text-xl font-bold text-gray-100 leading-none">
+          <div className="text-2xl font-bold text-gray-100 leading-none">
             Passive Income
           </div>
-          <div className="text-lg">
+          <div className="text-xl">
             <span className="text-gray-400">ROI:</span>{" "}
             <span className="text-cyan-300 font-semibold">
               {(totalRoiPerDay ?? 0).toFixed(2)} $ / day
             </span>
           </div>
           {isLoading && (
-            <div className="text-[10px] text-gray-500">Updating...</div>
+            <div className="text-xs text-gray-500">Updating...</div>
           )}
-          {error && <div className="text-[10px] text-red-400">{error}</div>}
+          {error && <div className="text-xs text-red-400">{error}</div>}
           {claimError && (
-            <div className="text-[10px] text-red-400">{claimError}</div>
+            <div className="text-xs text-red-400">{claimError}</div>
           )}
         </div>
       </div>

@@ -136,13 +136,21 @@ export default function SpinModal({ onClose, onSpinComplete }: SpinModalProps) {
 
     try {
       const walletAddress = wallet.publicKey.toBase58();
-      const { serialized, intentId, amountSol, solUsd, solUsdSource, priceUsd } = await buyEgg(eggType);
+      const quote = await buyEgg(eggType);
+      const { intentId, amountSol, solUsd, solUsdSource, priceUsd } = quote;
 
       setLastQuote({ eggType, priceUsd, amountSol, solUsd, solUsdSource });
 
+      // Dev mode: skip wallet signing entirely
+      if ((quote as any).devSkip) {
+        await confirmBuyEgg(eggType, `dev-skip-${Date.now()}`, intentId);
+        await startSpin(eggType);
+        return;
+      }
+
       // Prepare quote and show in-app confirmation modal.
       setBuyEggType(eggType);
-      setBuyQuote({ serialized, intentId, amountSol, solUsd, solUsdSource, priceUsd, eggType });
+      setBuyQuote({ serialized: quote.serialized, intentId, amountSol, solUsd, solUsdSource, priceUsd, eggType });
       setBuyOpen(true);
       return;
 
@@ -474,20 +482,36 @@ export default function SpinModal({ onClose, onSpinComplete }: SpinModalProps) {
           title="Confirm Egg Purchase"
           subtitle="Review the quote and sign the transaction."
           primaryText={buyWorking ? "Confirming…" : "Confirm & Sign"}
-          primaryDisabled={!buyQuote?.serialized || buyWorking}
+          primaryDisabled={(!buyQuote?.serialized && !buyQuote?.devSkip) || buyWorking}
           onPrimary={async () => {
-            if (!buyQuote?.serialized || !buyEggType) return;
-            if (!wallet.signTransaction) {
-              alert("Wallet doesn't support transaction signing");
+            if (!buyEggType) return;
+            setBuyWorking(true);
+
+            // Dev skip: no wallet signing needed
+            if (buyQuote?.devSkip) {
+              try {
+                await confirmBuyEgg(buyEggType, `dev-skip-${Date.now()}`, buyQuote.intentId);
+                setBuyOpen(false);
+                setBuyWorking(false);
+                await startSpin(buyEggType);
+              } catch (e: any) {
+                alert(`Buy egg failed: ${e.message || "Unknown error"}`);
+                setBuyWorking(false);
+              }
               return;
             }
 
-            setBuyWorking(true);
+            if (!buyQuote?.serialized) return;
+            if (!wallet.signTransaction) {
+              alert("Wallet doesn't support transaction signing");
+              setBuyWorking(false);
+              return;
+            }
 
             try {
               const { Transaction, Connection } = await import("@solana/web3.js");
               const connection = new Connection(
-                process.env.VITE_RPC_URL || "https://api.devnet.solana.com",
+                process.env.NEXT_PUBLIC_RPC_URL || "https://api.devnet.solana.com",
                 "confirmed",
               );
 

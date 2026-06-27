@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "build": "next build --webpack",
-    "build:cf": "next build --webpack && npx @cloudflare/next-on-pages", 
-    "dev": "next dev --webpack",
+    "build:cf": "next build --webpack && npx @cloudflare/next-on-pages",
+    "dev": "next dev --turbopack",
     "lint": "eslint .",
     "start": "next start"
   },
@@ -70,6 +70,7 @@
     "sass": "latest",
     "sass-embedded": "latest",
     "shadcn": "3.5.0",
+    "socket.io-client": "^4.8.3",
     "sonner": "^1.7.4",
     "stylus": "latest",
     "sugarss": "latest",

@@ -187,9 +187,9 @@ export default function AlienMenu({
 
       <div className="flex-[1.25] rounded-xl p-4 bg-black/60 backdrop-blur-sm border border-gray-800 flex flex-col h-auto lg:h-full min-h-0">
         <div className="mb-3">
-          <h2 className="text-xl font-bold text-white mb-0.5">My Aliens</h2>
-          <p className="text-xs text-gray-400">
-            Showing {visibleAliens.length}/{aliens.length} (top 20) — sized to fit laptop screen
+          <h2 className="text-2xl font-bold text-white mb-0.5">My Aliens</h2>
+          <p className="text-sm text-gray-400">
+            Showing {visibleAliens.length}/{aliens.length} (top 20)
           </p>
         </div>
 
@@ -205,37 +205,37 @@ export default function AlienMenu({
               <p className="text-xs mt-1">Spin an egg to get your first alien!</p>
             </div>
           ) : (
-            <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-3">
               {visibleAliens.map((alien) => {
               const isAssigned = assignedAlienIds.has(alien.id);
 
               return (
                 <div
                   key={alien.id}
-                  className={`bg-gradient-to-br from-gray-900 to-black border ${tierColors[alien.tier] || tierColors.Common} rounded-lg p-2 transition-shadow duration-150 ease-out hover:shadow-md ${
+                  className={`bg-gradient-to-br from-gray-900 to-black border ${tierColors[alien.tier] || tierColors.Common} rounded-lg p-2.5 transition-shadow duration-150 ease-out hover:shadow-md ${
                     isAssigned ? "opacity-60" : ""
                   }`}
                 >
-                  <div className="flex justify-center mb-1">
+                  <div className="flex justify-center mb-1.5">
                     <img
                       src={alien.image || "/placeholder.svg"}
                       alt={`Alien ${alien.alien_id || alien.id}`}
                       loading="lazy"
                       decoding="async"
-                      className="w-10 h-10 md:w-12 md:h-12 object-contain"
+                      className="w-14 h-14 md:w-16 md:h-16 object-contain"
                     />
                   </div>
 
-                  <div className="text-center space-y-0.5 mb-1">
-                    <div className="text-white text-[11px] md:text-xs font-semibold leading-tight">
+                  <div className="text-center space-y-0.5 mb-1.5">
+                    <div className="text-white text-xs md:text-sm font-semibold leading-tight">
                       #{alien.alien_id || alien.id}
                     </div>
                     <div
-                      className={`text-[11px] md:text-xs font-bold leading-tight ${tierColors[alien.tier]?.split(" ")[1] || "text-green-400"}`}
+                      className={`text-xs md:text-sm font-bold leading-tight ${tierColors[alien.tier]?.split(" ")[1] || "text-green-400"}`}
                     >
                       {alien.tier || "Common"}
                     </div>
-                    <div className="text-cyan-300 text-[11px] md:text-xs leading-tight">
+                    <div className="text-cyan-300 text-xs md:text-sm leading-tight">
                       {(alien.roi || 0).toFixed(1)}/day
                     </div>
                   </div>
@@ -243,7 +243,7 @@ export default function AlienMenu({
                   <button
                     onClick={() => handleAssignToShip(alien)}
                     disabled={assigning || isAssigned}
-                    className={`w-full py-1 rounded-md text-white text-[11px] font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    className={`w-full py-1.5 rounded-md text-white text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                       isAssigned
                         ? "bg-gray-700 border border-gray-600"
                         : "bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
