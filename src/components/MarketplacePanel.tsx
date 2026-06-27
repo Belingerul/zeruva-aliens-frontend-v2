@@ -75,16 +75,16 @@ function AlienCard({
           className="w-full aspect-square object-cover"
           onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
         />
-        <span
-          className={`absolute top-1.5 left-1.5 inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${ts.border} ${ts.bg} ${ts.text} uppercase tracking-wider`}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {TIER_ICON[tier] && <img src={TIER_ICON[tier]} alt="" className="w-3 h-3 object-contain" />}
-          {tier}
-        </span>
       </div>
       <div className="flex flex-col gap-1 p-2.5 flex-1">
-        <div className="text-xs font-semibold text-gray-200">Alien #{alienId}</div>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-xs font-semibold text-gray-200 truncate">Alien #{alienId}</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {TIER_ICON[tier] && (
+            <img src={`${TIER_ICON[tier]}?v=2`} alt="" className="w-4 h-4 object-contain shrink-0" />
+          )}
+          <span className={`text-[10px] font-bold uppercase tracking-wide ${ts.text}`}>{tier}</span>
+        </div>
         <div className="text-[11px] text-gray-400">${roi}/day ROI</div>
         {priceSol !== undefined && (
           <div className="text-sm font-bold text-emerald-300 mt-0.5">{priceSol} SOL</div>

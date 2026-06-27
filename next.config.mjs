@@ -7,6 +7,13 @@ const nextConfig = {
   // multiple Phantom signature popups during login. Disable it for this app.
   reactStrictMode: false,
 
+  // Hide the Next.js dev overlay/badge (the bottom-corner "Compiling…" + logo).
+  // Note: this only hides the indicator. The first-visit compile delay is a
+  // dev-only behavior (routes compile on demand); a production build
+  // (`next build && next start`) pre-compiles every route, so realm pages open
+  // instantly with no "compiling" step.
+  devIndicators: false,
+
   // Turbopack (Next 16 default) is dramatically faster than webpack for dev
   // cold-starts and HMR. An empty/standard config is enough here — the only
   // webpack tweak below (stubbing pino-pretty) is for a walletconnect dep that
@@ -45,13 +52,18 @@ const nextConfig = {
       process.env.BACKEND_URL ||
       "https://zeruva-backend-production.up.railway.app";
 
+    const be = backend.replace(/\/+$/, "");
     return [
       {
         // Proxy API requests through the same origin to avoid CORS issues,
         // especially when the frontend is accessed via https tunnels.
         source: "/api/:path*",
-        destination: `${backend.replace(/\/+$/, "")}/api/:path*`,
+        destination: `${be}/api/:path*`,
       },
+      // Alien art + NFT metadata live on the backend; proxy them same-origin so
+      // images load when the app is opened over a Cloudflare tunnel on a phone.
+      { source: "/static/:path*", destination: `${be}/static/:path*` },
+      { source: "/nft/:path*", destination: `${be}/nft/:path*` },
     ];
   },
 

@@ -14,6 +14,13 @@ import {
   type ShipWithSlots,
 } from "../api";
 
+// Neon etched-glass glyphs used as planet icons (Astra / Vulcan / Nyx …).
+const PLANET_GLYPHS = [
+  "/brand/style-hex.png",
+  "/brand/style-star.png",
+  "/brand/style-drop.png",
+];
+
 interface SpaceshipPanelProps {
   onAlienUnassigned?: () => void;
   onRoiChange?: () => void; // Call this BEFORE API call to freeze display
@@ -366,22 +373,8 @@ export default function SpaceshipPanel({
         </div>
 
         <div className="mt-2 space-y-3">
-          {!expedition?.expedition_active && planets?.length ? (
-            <div className="bg-black/30 border border-gray-800 rounded-lg p-3">
-              <div className="text-sm text-gray-300 font-semibold mb-2">Select Planet</div>
-              <select
-                value={selectedPlanet}
-                onChange={(e) => setSelectedPlanet(e.target.value)}
-                className="w-full bg-black/50 border border-gray-700 rounded-md px-3 py-2 text-gray-100"
-              >
-                {planets.map((p: any) => (
-                  <option key={p.key} value={p.key}>
-                    {p.name || p.key} (x{p.roiMult || 1})
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
+          {/* Planet selector removed for now (per request). Expeditions default
+              to the base planet; selectedPlanet still drives the API call. */}
 
           <motion.button
             whileHover={{ scale: expedition?.expedition_active ? 1 : 1.02 }}

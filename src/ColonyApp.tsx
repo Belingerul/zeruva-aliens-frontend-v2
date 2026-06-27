@@ -138,7 +138,7 @@ function ColonyContent() {
   if (wallet.connected && !authReady) {
     return (
       <div className="min-h-dvh flex flex-col bg-gradient-to-br from-gray-950 via-gray-900 to-black">
-        <TopBar backHref="/" title="The Colony" />
+        <TopBar backHref="/" title="The Colony" icon="/icons/realm-colony.png" />
         <div className="flex-1 flex items-center justify-center text-gray-200">
           <div className="bg-black/40 border border-gray-700 rounded-xl px-6 py-5 text-center">
             <div className="text-lg font-semibold">Signing in…</div>
@@ -151,7 +151,7 @@ function ColonyContent() {
 
   return (
     <div className="min-h-dvh lg:h-dvh flex flex-col bg-gradient-to-br from-gray-950 via-gray-900 to-black">
-      <TopBar backHref="/" title="The Colony" />
+      <TopBar backHref="/" title="The Colony" icon="/icons/realm-colony.png" />
 
       <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 flex-1 min-h-0 lg:overflow-hidden">
         <LeftPanel

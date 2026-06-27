@@ -24,7 +24,7 @@ const tierGlow: Record<Tier, string> = {
 
 const tierColor: Record<Tier, string> = {
   Nothing: "text-gray-500",
-  Common: "text-green-500",
+  Common: "text-slate-300",
   Rare: "text-blue-500",
   Epic: "text-purple-500",
   Legendary: "text-yellow-500",

@@ -93,7 +93,7 @@ export default function LeftPanel({
   const isDisabled = !wallet.connected;
 
   return (
-    <div className="w-full lg:w-96 xl:w-[26rem] rounded-xl p-5 lg:p-4 bg-black/60 backdrop-blur-sm border border-gray-800 h-auto lg:h-full lg:self-stretch flex flex-col gap-3 overflow-hidden">
+    <div className="w-full lg:w-96 xl:w-[26rem] rounded-xl p-5 lg:p-5 bg-black/60 backdrop-blur-sm border border-gray-800 h-auto lg:h-full lg:self-stretch flex flex-col gap-4 lg:gap-3 lg:justify-evenly overflow-hidden">
       {/* Spin Section */}
       <div>
         <h3 className="font-extrabold mb-2 text-gray-100 text-2xl tracking-tight">
@@ -104,7 +104,19 @@ export default function LeftPanel({
           disabled={isDisabled}
           className="w-full py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold hover:from-cyan-600 hover:to-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-700 disabled:to-gray-700"
         >
-          {isDisabled ? "Connect Wallet First" : "🎰 Open Spin Modal"}
+          {isDisabled ? (
+            "Connect Wallet First"
+          ) : (
+            <span className="inline-flex items-center justify-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icons/realm-colony.png"
+                alt=""
+                className="w-5 h-5 object-contain drop-shadow-[0_0_8px_rgba(34,211,238,0.7)]"
+              />
+              Open Spin Modal
+            </span>
+          )}
         </button>
       </div>
 
@@ -244,29 +256,6 @@ export default function LeftPanel({
         onRoiChangeReady={onRoiChangeReady}
         onNextClaimAtChange={setNextClaimAt}
       />
-
-      {wallet.connected && wallet.publicKey && (
-        <div className="mt-auto text-xs text-cyan-200 bg-black/40 rounded-xl p-2.5 border border-gray-700">
-          <div className="font-semibold mb-2">Connected</div>
-          <div className="flex items-center gap-2">
-            <div className="font-mono text-lg flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-              {wallet.publicKey.toBase58()}
-            </div>
-            <button
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(wallet.publicKey!.toBase58());
-                } catch {
-                  // ignore
-                }
-              }}
-              className="shrink-0 px-3 py-1.5 rounded-lg border border-gray-600 text-gray-200 text-xs hover:bg-white/5"
-            >
-              Copy
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

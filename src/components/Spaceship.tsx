@@ -87,7 +87,7 @@ export default function Spaceship() {
                   alt={`Alien in slot ${slot.slot_index}`}
                 />
                 <div
-                  className={`text-sm font-bold ${slot.tier === "Legendary" ? "text-yellow-400" : slot.tier === "Epic" ? "text-purple-400" : slot.tier === "Rare" ? "text-blue-400" : "text-green-400"}`}
+                  className={`text-sm font-bold ${slot.tier === "Legendary" ? "text-yellow-400" : slot.tier === "Epic" ? "text-purple-400" : slot.tier === "Rare" ? "text-blue-400" : "text-slate-300"}`}
                 >
                   {slot.tier}
                 </div>

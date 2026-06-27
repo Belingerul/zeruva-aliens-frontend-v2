@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -48,8 +47,17 @@ export default function RootLayout({
     // attributes only (not children), so real mismatches below still surface.
     <html lang="en" suppressHydrationWarning>
       <body className={`font-sans antialiased`} suppressHydrationWarning>
+        {/* Pre-select Phantom before the wallet providers mount so the FIRST
+            "Connect Wallet" click opens Phantom. @solana/wallet-adapter-react
+            reads this localStorage key synchronously on first render; without
+            it the initial select()->connect() runs against an unselected
+            adapter and silently no-ops until a page refresh. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(!localStorage.getItem('walletName'))localStorage.setItem('walletName',JSON.stringify('Phantom'))}catch(e){}`,
+          }}
+        />
         {children}
-        <Analytics />
       </body>
     </html>
   );

@@ -10,7 +10,7 @@ const tierBorder: Record<string, string> = {
   Legendary: "border-yellow-500/70",
   Epic: "border-purple-500/70",
   Rare: "border-blue-500/70",
-  Common: "border-green-500/60",
+  Common: "border-slate-400/60",
   Nothing: "border-gray-700",
 };
 
@@ -18,7 +18,7 @@ const tierText: Record<string, string> = {
   Legendary: "text-yellow-400",
   Epic: "text-purple-400",
   Rare: "text-blue-400",
-  Common: "text-green-400",
+  Common: "text-slate-300",
 };
 
 export default function Hangar({
@@ -119,7 +119,7 @@ export default function Hangar({
                 alt={`Alien ${id}`}
               />
               <div className="text-white text-sm font-semibold">Alien #{id}</div>
-              <div className={`text-xs font-bold ${tierText[alien.tier || "Common"] || "text-green-400"}`}>
+              <div className={`text-xs font-bold ${tierText[alien.tier || "Common"] || "text-slate-300"}`}>
                 {alien.tier || "Common"}
               </div>
               {alien.roi !== undefined && (

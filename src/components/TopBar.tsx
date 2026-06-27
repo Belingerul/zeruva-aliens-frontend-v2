@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 const WalletMultiButtonDynamic = dynamic(
   async () =>
@@ -12,12 +13,39 @@ const WalletMultiButtonDynamic = dynamic(
 interface TopBarProps {
   backHref?: string;
   title?: string;
+  icon?: string;
 }
 
-export default function TopBar({ backHref, title }: TopBarProps) {
+// Compact "connected" status that lives top-right, in line with the title.
+function ConnectedPill() {
+  const { connected, publicKey } = useWallet();
+  if (!connected || !publicKey) return null;
+  const addr = publicKey.toBase58();
+  const short = `${addr.slice(0, 4)}…${addr.slice(-4)}`;
   return (
-    <div className="w-full px-4 md:px-6 py-2 bg-black/40 border-b border-gray-800 flex items-center justify-between gap-3">
-      <div className="flex items-center gap-3 min-w-0">
+    <button
+      type="button"
+      title="Copy wallet address"
+      onClick={() => {
+        try {
+          navigator.clipboard?.writeText(addr);
+        } catch {
+          /* ignore */
+        }
+      }}
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 text-emerald-200 text-xs font-semibold hover:bg-emerald-500/15 transition-colors max-w-full"
+    >
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+      <span className="font-mono truncate">{short}</span>
+    </button>
+  );
+}
+
+export default function TopBar({ backHref, title, icon }: TopBarProps) {
+  return (
+    <div className="w-full px-3 md:px-6 py-2 bg-black/40 border-b border-gray-800 flex items-center justify-between gap-2 sm:gap-3">
+      {/* LEFT: nav + connect button + realm logo (logo sits by the connect button) */}
+      <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 shrink-0">
         {backHref && (
           <Link
             href={backHref}
@@ -25,24 +53,44 @@ export default function TopBar({ backHref, title }: TopBarProps) {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icons/ui-back.png" alt="" className="w-4 h-4 object-contain" />
-            Hub
+            <span className="hidden sm:inline">Hub</span>
           </Link>
         )}
-        <WalletMultiButtonDynamic />
-      </div>
 
-      <div className="flex-1 text-center min-w-0">
-        <div className="text-lg sm:text-2xl font-black bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent leading-none truncate">
-          ZERUVA
-        </div>
-        {title && (
-          <div className="text-[10px] sm:text-xs text-gray-500 font-medium tracking-widest uppercase truncate">
-            {title}
-          </div>
+        <WalletMultiButtonDynamic />
+
+        {icon && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={icon}
+            alt=""
+            className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0 drop-shadow-[0_0_12px_rgba(34,211,238,0.85)]"
+          />
         )}
       </div>
 
-      <div className="min-w-[80px] sm:min-w-[120px]" />
+      {/* CENTER: brand + title, centered (separated from the connect button) */}
+      <div className="flex flex-1 items-center justify-center gap-1.5 min-w-0 leading-none">
+        <span className="text-base sm:text-xl font-black bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent truncate">
+          ZERUVA
+        </span>
+        {title && (
+          <>
+            <span className="hidden sm:inline text-gray-600">·</span>
+            <span
+              className="hidden sm:inline text-sm font-extrabold tracking-[0.18em] uppercase text-cyan-100 truncate"
+              style={{ textShadow: "0 0 14px rgba(34,211,238,0.55)" }}
+            >
+              {title}
+            </span>
+          </>
+        )}
+      </div>
+
+      {/* RIGHT: connected status, top-right, in line with the title */}
+      <div className="flex items-center justify-end shrink-0 min-w-0 max-w-[40%]">
+        <ConnectedPill />
+      </div>
     </div>
   );
 }

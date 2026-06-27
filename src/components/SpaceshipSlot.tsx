@@ -16,7 +16,7 @@ interface SpaceshipSlotProps {
 }
 
 const rarityColors = {
-  Common: "border-green-500 shadow-green-500/50",
+  Common: "border-slate-400 shadow-slate-400/50",
   Rare: "border-blue-500 shadow-blue-500/50",
   Epic: "border-purple-500 shadow-purple-500/50",
   Legendary: "border-yellow-500 shadow-yellow-500/50",
