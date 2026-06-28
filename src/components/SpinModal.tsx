@@ -11,6 +11,7 @@ import {
   confirmBuyEgg,
 } from "../api";
 import ConfirmModal from "./ConfirmModal";
+import { getConnection } from "../utils/solanaConnection";
 
 type Tier = "Nothing" | "Common" | "Rare" | "Epic" | "Legendary";
 
@@ -152,49 +153,6 @@ export default function SpinModal({ onClose, onSpinComplete }: SpinModalProps) {
       setBuyEggType(eggType);
       setBuyQuote({ serialized: quote.serialized, intentId, amountSol, solUsd, solUsdSource, priceUsd, eggType });
       setBuyOpen(true);
-      return;
-
-      const { Transaction, Connection } = await import("@solana/web3.js");
-      const connection = new Connection(
-        process.env.VITE_RPC_URL || "https://api.devnet.solana.com",
-        "confirmed",
-      );
-
-      const tx = Transaction.from(Buffer.from(serialized, "base64"));
-
-      if (!wallet.signTransaction) {
-        alert("Wallet doesn't support transaction signing");
-        return;
-      }
-
-      // Make sure the user has devnet SOL for fees + payment
-      const balance = await connection.getBalance(
-        wallet.publicKey,
-        "confirmed",
-      );
-      if (balance < 0.001 * 1e9) {
-        alert(
-          "You have 0 SOL (devnet). Get devnet SOL (airdrop) then try again.",
-        );
-        return;
-      }
-
-      // Prefer wallet-adapter sendTransaction when available
-      let sig: string;
-      if (wallet.sendTransaction) {
-        sig = await wallet.sendTransaction(tx, connection);
-      } else {
-        const signed = await wallet.signTransaction(tx);
-        sig = await connection.sendRawTransaction(signed.serialize());
-      }
-
-      await connection.confirmTransaction(sig, "confirmed");
-
-      // Confirm with backend using the intentId (locks in the SOL/USD quote used to build the tx)
-      await confirmBuyEgg(eggType, sig, intentId);
-
-      // After crediting, run the normal spin flow
-      await startSpin(eggType);
     } catch (e: any) {
       console.error("Buy egg failed", e);
       alert(`Buy egg failed: ${e.message || "Unknown error"}`);
@@ -509,11 +467,8 @@ export default function SpinModal({ onClose, onSpinComplete }: SpinModalProps) {
             }
 
             try {
-              const { Transaction, Connection } = await import("@solana/web3.js");
-              const connection = new Connection(
-                process.env.NEXT_PUBLIC_RPC_URL || "https://api.devnet.solana.com",
-                "confirmed",
-              );
+              const { Transaction } = await import("@solana/web3.js");
+              const connection = getConnection("confirmed");
 
               const tx = Transaction.from(Buffer.from(buyQuote.serialized, "base64"));
 

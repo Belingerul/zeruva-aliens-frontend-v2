@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { Connection, Transaction } from "@solana/web3.js";
+import { Transaction } from "@solana/web3.js";
 import TopBar from "./TopBar";
 import {
   getMarketplaceListings,
@@ -19,9 +19,7 @@ import {
   type AlienWithStats,
 } from "../api";
 import { ensureAuth } from "../utils/ensureAuth";
-
-const RPC_URL =
-  process.env.NEXT_PUBLIC_RPC_URL || "https://api.devnet.solana.com";
+import { getConnection } from "../utils/solanaConnection";
 
 // Canonical rarity colors — kept in sync with Colony (AlienMenu/SpaceshipSlot):
 // Common = slate, Rare = sky, Epic = purple, Legendary = amber/gold.
@@ -208,7 +206,7 @@ export default function MarketplacePanel() {
       const resp = await listAlienForSale(listTarget.id, price);
       // On-chain escrow: sign the NFT transfer into escrow, then activate.
       if (resp.escrow && resp.serialized) {
-        const connection = new Connection(RPC_URL, "confirmed");
+        const connection = getConnection("confirmed");
         const tx = Transaction.from(Buffer.from(resp.serialized, "base64"));
         const signed = await wallet.signTransaction!(tx);
         const sig = await connection.sendRawTransaction(signed.serialize());
@@ -252,7 +250,7 @@ export default function MarketplacePanel() {
       if (quote.devSkip) {
         await confirmBuyListing(buyTarget.id, quote.intentId, null);
       } else {
-        const connection = new Connection(RPC_URL, "confirmed");
+        const connection = getConnection("confirmed");
         const tx = Transaction.from(Buffer.from(quote.serialized!, "base64"));
         const signed = await wallet.signTransaction!(tx);
         const sig = await connection.sendRawTransaction(signed.serialize());

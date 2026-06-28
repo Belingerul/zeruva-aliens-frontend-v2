@@ -7,6 +7,7 @@ import TopBar from "./TopBar";
 import SolanaLogo from "./SolanaLogo";
 import { ensureAuth } from "../utils/ensureAuth";
 import { sfx, isMuted, setMuted } from "../utils/sfx";
+import { getConnection } from "../utils/solanaConnection";
 import {
   apiStaticUrl,
   arenaConfirmDeposit,
@@ -262,8 +263,8 @@ export default function ArenaGame() {
       if (quote.devSkip) {
         await arenaConfirmDeposit(quote.intentId, null);
       } else {
-        const { Connection, Transaction } = await import("@solana/web3.js");
-        const connection = new Connection(process.env.NEXT_PUBLIC_RPC_URL || "https://api.devnet.solana.com", "confirmed");
+        const { Transaction } = await import("@solana/web3.js");
+        const connection = getConnection("confirmed");
         const tx = Transaction.from(Buffer.from(quote.serialized!, "base64"));
         const signed = await wallet.signTransaction!(tx);
         const sig = await connection.sendRawTransaction(signed.serialize());

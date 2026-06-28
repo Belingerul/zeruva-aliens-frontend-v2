@@ -5,6 +5,7 @@ import { getShipWithSlots, type ShipWithSlots } from "../api";
 import RewardsCard from "./RewardsCard";
 import QuoteCard from "./QuoteCard";import ConfirmModal from "./ConfirmModal";
 import { useEffect, useMemo, useState } from "react";
+import { getConnection } from "../utils/solanaConnection";
 
 interface LeftPanelProps {
   onOpenSpin: () => void;
@@ -192,12 +193,9 @@ export default function LeftPanel({
             }
 
             try {
-              const { Transaction, Connection } = await import("@solana/web3.js");
+              const { Transaction } = await import("@solana/web3.js");
               const { confirmBuySpaceship } = await import("../api");
-              const connection = new Connection(
-                process.env.NEXT_PUBLIC_RPC_URL || "https://api.devnet.solana.com",
-                "confirmed",
-              );
+              const connection = getConnection("confirmed");
 
               const tx = Transaction.from(
                 Buffer.from(shipBuyQuote.serialized, "base64"),
