@@ -11,11 +11,20 @@ import {
   type ShipWithSlots,
 } from "../api";
 
+// Canonical rarity colors — matched to the tier badge art (Common = silver,
+// Rare = blue, Epic = purple, Legendary = gold) so Colony and Marketplace agree.
 const tierColors: Record<string, string> = {
-  Common: "border-green-500 text-green-400",
-  Rare: "border-blue-500 text-blue-400",
-  Epic: "border-purple-500 text-purple-400",
-  Legendary: "border-yellow-500 text-yellow-400",
+  Common: "border-slate-400/70 text-slate-300",
+  Rare: "border-sky-400/70 text-sky-300",
+  Epic: "border-purple-400/70 text-purple-300",
+  Legendary: "border-amber-400/70 text-amber-300",
+};
+
+const tierIcon: Record<string, string> = {
+  Common: "/icons/tier-common.png",
+  Rare: "/icons/tier-rare.png",
+  Epic: "/icons/tier-epic.png",
+  Legendary: "/icons/tier-legendary.png",
 };
 
 interface AlienMenuProps {
@@ -230,10 +239,18 @@ export default function AlienMenu({
                     <div className="text-white text-xs md:text-sm font-semibold leading-tight">
                       #{alien.alien_id || alien.id}
                     </div>
-                    <div
-                      className={`text-xs md:text-sm font-bold leading-tight ${tierColors[alien.tier]?.split(" ")[1] || "text-green-400"}`}
-                    >
-                      {alien.tier || "Common"}
+                    <div className="flex items-center justify-center gap-1 leading-tight">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`${tierIcon[alien.tier || "Common"] || tierIcon.Common}?v=2`}
+                        alt=""
+                        className="w-4 h-4 md:w-[18px] md:h-[18px] object-contain shrink-0 drop-shadow-[0_0_6px_rgba(255,255,255,0.25)]"
+                      />
+                      <span
+                        className={`text-xs md:text-sm font-bold ${tierColors[alien.tier]?.split(" ")[1] || "text-slate-300"}`}
+                      >
+                        {alien.tier || "Common"}
+                      </span>
                     </div>
                     <div className="text-cyan-300 text-xs md:text-sm leading-tight">
                       {(alien.roi || 0).toFixed(1)}/day

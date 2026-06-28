@@ -14,6 +14,13 @@ import {
   type ShipWithSlots,
 } from "../api";
 
+// Neon etched-glass glyphs used as planet icons (Astra / Vulcan / Nyx …).
+const PLANET_GLYPHS = [
+  "/brand/style-hex.png",
+  "/brand/style-star.png",
+  "/brand/style-drop.png",
+];
+
 interface SpaceshipPanelProps {
   onAlienUnassigned?: () => void;
   onRoiChange?: () => void; // Call this BEFORE API call to freeze display
@@ -366,22 +373,8 @@ export default function SpaceshipPanel({
         </div>
 
         <div className="mt-2 space-y-3">
-          {!expedition?.expedition_active && planets?.length ? (
-            <div className="bg-black/30 border border-gray-800 rounded-lg p-3">
-              <div className="text-sm text-gray-300 font-semibold mb-2">Select Planet</div>
-              <select
-                value={selectedPlanet}
-                onChange={(e) => setSelectedPlanet(e.target.value)}
-                className="w-full bg-black/50 border border-gray-700 rounded-md px-3 py-2 text-gray-100"
-              >
-                {planets.map((p: any) => (
-                  <option key={p.key} value={p.key}>
-                    {p.name || p.key} (x{p.roiMult || 1})
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
+          {/* Planet selector removed for now (per request). Expeditions default
+              to the base planet; selectedPlanet still drives the API call. */}
 
           <motion.button
             whileHover={{ scale: expedition?.expedition_active ? 1 : 1.02 }}
@@ -399,8 +392,18 @@ export default function SpaceshipPanel({
                 : "Start Expedition (6h)"}
           </motion.button>
 
-          <div className="text-xs text-gray-400 text-center">
-            Earnings happen only during expeditions (assigned aliens only).
+          <div className="flex items-center justify-center text-xs">
+            {expedition?.expedition_active ? (
+              <span className="flex items-center gap-1.5 font-semibold text-emerald-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+                Earning while deployed
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-gray-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-600" />
+                Idle — launch to start earning
+              </span>
+            )}
           </div>
         </div>
       </div>

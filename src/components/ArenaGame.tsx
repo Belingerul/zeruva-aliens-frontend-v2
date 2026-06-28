@@ -4,8 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { io, type Socket } from "socket.io-client";
 import TopBar from "./TopBar";
+import SolanaLogo from "./SolanaLogo";
 import { ensureAuth } from "../utils/ensureAuth";
 import { sfx, isMuted, setMuted } from "../utils/sfx";
+import { getConnection } from "../utils/solanaConnection";
 import {
   apiStaticUrl,
   arenaConfirmDeposit,
@@ -75,6 +77,9 @@ export default function ArenaGame() {
   const [tab, setTab] = useState<"play" | "wallet" | "board" | "guide">("play");
   const [board, setBoard] = useState<{ name: string; bounty: number; kills: number; alienId: number | null }[]>([]);
   const [boardLoading, setBoardLoading] = useState(false);
+  const [withdrawAmt, setWithdrawAmt] = useState(""); // SOL string for partial withdraw
+  const [depositAmt, setDepositAmt] = useState("");   // USD string for partial deposit
+  const [walletMode, setWalletMode] = useState<"deposit" | "withdraw">("deposit");
 
   useEffect(() => {
     setMounted(true);
@@ -258,8 +263,8 @@ export default function ArenaGame() {
       if (quote.devSkip) {
         await arenaConfirmDeposit(quote.intentId, null);
       } else {
-        const { Connection, Transaction } = await import("@solana/web3.js");
-        const connection = new Connection(process.env.NEXT_PUBLIC_RPC_URL || "https://api.devnet.solana.com", "confirmed");
+        const { Transaction } = await import("@solana/web3.js");
+        const connection = getConnection("confirmed");
         const tx = Transaction.from(Buffer.from(quote.serialized!, "base64"));
         const signed = await wallet.signTransaction!(tx);
         const sig = await connection.sendRawTransaction(signed.serialize());
@@ -276,15 +281,22 @@ export default function ArenaGame() {
     }
   }
 
-  async function withdrawAll() {
-    if (balance === null || balance < 0.01) return;
+  // Withdraw a specific SOL amount (capped at the 5 SOL/withdraw server limit
+  // and the current balance). `withdrawAmt` drives the input; presets fill it.
+  async function withdraw(sol: number) {
+    const cap = Math.min(5, Math.floor((balance ?? 0) * 1000) / 1000);
+    const amount = Math.min(cap, Math.floor(sol * 1000) / 1000);
+    if (!Number.isFinite(amount) || amount < 0.01) {
+      setErr("Enter an amount to withdraw (min ◎0.01).");
+      return;
+    }
     setErr(null);
     setWorking("withdraw");
     sfx.click();
     try {
       await ensureAuth(wallet as any);
-      const amount = Math.min(5, Math.floor(balance * 1000) / 1000);
       await arenaWithdraw(amount);
+      setWithdrawAmt("");
       sfx.deposit();
       await refreshLobby();
     } catch (e: any) {
@@ -633,8 +645,8 @@ export default function ArenaGame() {
               {/* Bounty chip */}
               <div className="absolute top-3 left-3 rounded-xl border border-amber-400/30 bg-black/70 backdrop-blur px-4 py-2">
                 <div className="text-[10px] uppercase tracking-widest text-gray-500">Your bounty</div>
-                <div key={myBounty} className="text-xl font-extrabold text-amber-300 tabular-nums arena-pop">
-                  ◎{myBounty.toFixed(3)} <span className="text-xs text-gray-500 font-semibold">${usdOf(myBounty)}</span>
+                <div key={myBounty} className="flex items-center gap-1.5 text-xl font-extrabold text-amber-300 tabular-nums arena-pop">
+                  <SolanaLogo size={17} />{myBounty.toFixed(3)} <span className="text-xs text-gray-500 font-semibold">${usdOf(myBounty)}</span>
                 </div>
               </div>
 
@@ -664,8 +676,8 @@ export default function ArenaGame() {
               {channelLeft > 0 ? (
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
                   <div className="rounded-xl border border-emerald-400/50 bg-black/80 backdrop-blur px-5 py-2.5 text-center arena-rise">
-                    <div className="text-emerald-300 font-extrabold text-base tabular-nums">
-                      CASHING OUT ◎{(myBounty * 0.9).toFixed(3)} in {channelSec}s
+                    <div className="flex items-center justify-center gap-1.5 text-emerald-300 font-extrabold text-base tabular-nums">
+                      CASHING OUT <SolanaLogo size={15} />{(myBounty * 0.9).toFixed(3)} in {channelSec}s
                     </div>
                     <div className="text-[11px] text-red-300/90 font-semibold">You are FROZEN — don&apos;t get eaten!</div>
                   </div>
@@ -676,9 +688,9 @@ export default function ArenaGame() {
               ) : (
                 <button
                   onClick={startCashout}
-                  className="absolute bottom-4 right-4 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-extrabold text-sm shadow-[0_0_24px_rgba(16,185,129,0.35)] hover:scale-105 transition-transform"
+                  className="absolute bottom-4 right-4 flex items-center gap-1.5 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-extrabold text-sm shadow-[0_0_24px_rgba(16,185,129,0.35)] hover:scale-105 transition-transform"
                 >
-                  CASH OUT ◎{(myBounty * 0.9).toFixed(3)}
+                  CASH OUT <SolanaLogo size={15} />{(myBounty * 0.9).toFixed(3)}
                 </button>
               )}
 
@@ -698,7 +710,54 @@ export default function ArenaGame() {
           {/* Lobby / death / cashed — premium tabbed panel */}
           {phase !== "playing" && (
             <div className="absolute inset-0 flex items-start sm:items-center justify-center p-3 sm:p-4 bg-gradient-to-b from-black/70 via-[#0a0613]/75 to-black/85 backdrop-blur-[3px] overflow-y-auto">
-              <div className="arena-panel w-full max-w-xl rounded-3xl border border-white/10 bg-[#0b0712]/95 p-5 sm:p-7 my-3 sm:my-4">
+              <div className="w-full max-w-7xl flex items-center justify-center gap-5 my-3 sm:my-4">
+
+                {/* LEFT side panel — arena intel + quick rules (desktop only) */}
+                <aside className="hidden lg:flex flex-col gap-4 w-72 shrink-0 self-center">
+                  <div className="relative overflow-hidden rounded-2xl border border-rose-500/25 bg-gradient-to-b from-rose-500/[0.12] via-rose-500/[0.03] to-transparent p-5">
+                    <div className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-rose-500/15 blur-3xl" />
+                    <h3 className="relative text-xl font-black tracking-tight bg-gradient-to-r from-rose-300 to-fuchsia-200 bg-clip-text text-transparent mb-4">Arena Intel</h3>
+                    <div className="relative space-y-3">
+                      <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+                        <div className="text-[11px] text-gray-400 uppercase tracking-wider">Hunters live</div>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-60 animate-ping" />
+                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-400" />
+                          </span>
+                          <span className="text-3xl font-black text-rose-100 tabular-nums leading-none">{stats?.players ?? 0}</span>
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+                        <div className="text-[11px] text-gray-400 uppercase tracking-wider">Total bounty</div>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <SolanaLogo size={22} />
+                          <span className="text-3xl font-black text-amber-300 tabular-nums leading-none">{(stats?.total_bounty_sol ?? 0).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/40 p-5 flex flex-col gap-3.5">
+                    <h3 className="text-sm font-black uppercase tracking-[0.16em] text-gray-300">How it works</h3>
+                    {([
+                      ["🎯", "Stake = bounty", "Your stake becomes your cell's bounty."],
+                      ["⚔️", "Devour", "Eat smaller players to take 100% of theirs."],
+                      ["💰", "Cash out", "Hold 3s while frozen to bank it (10% fee)."],
+                    ] as const).map(([icon, t, b]) => (
+                      <div key={t} className="flex gap-3">
+                        <span className="text-lg shrink-0 leading-none mt-0.5">{icon}</span>
+                        <div>
+                          <div className="text-sm font-bold text-gray-100">{t}</div>
+                          <div className="text-[12px] text-gray-500 leading-snug mt-0.5">{b}</div>
+                        </div>
+                      </div>
+                    ))}
+                    <button onClick={() => { setTab("guide"); sfx.tab(); }} className="text-xs font-semibold text-rose-300/80 hover:text-rose-200 text-left">Full guide →</button>
+                  </div>
+                </aside>
+
+                {/* CENTER */}
+                <div className="arena-panel w-full max-w-2xl rounded-3xl border border-white/10 bg-[#0b0712]/95 p-6 sm:p-8">
 
                 {/* Result banners */}
                 {phase === "dead" && deathInfo && (
@@ -706,14 +765,14 @@ export default function ArenaGame() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="/icons/arena-death.png" alt="" className="w-16 h-16 object-contain mx-auto mb-1" />
                     <div className="text-lg font-extrabold text-red-300">Devoured by {deathInfo.by}</div>
-                    <div className="text-sm text-gray-400 mt-0.5">Bounty lost: <span className="text-red-300 font-bold">◎{deathInfo.bountyLost.toFixed(3)}</span></div>
+                    <div className="flex items-center justify-center gap-1 text-sm text-gray-400 mt-0.5">Bounty lost: <span className="inline-flex items-center gap-1 text-red-300 font-bold"><SolanaLogo size={13} />{deathInfo.bountyLost.toFixed(3)}</span></div>
                   </div>
                 )}
                 {phase === "cashed" && cashInfo && (
                   <div className="mb-5 rounded-2xl border border-emerald-500/30 bg-emerald-950/30 p-4 text-center arena-pop">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="/icons/arena-cashout.png" alt="" className="w-16 h-16 object-contain mx-auto mb-1" />
-                    <div className="text-lg font-extrabold text-emerald-300">Cashed out ◎{cashInfo.credited.toFixed(3)}</div>
+                    <div className="flex items-center justify-center gap-1.5 text-lg font-extrabold text-emerald-300">Cashed out <SolanaLogo size={16} />{cashInfo.credited.toFixed(3)}</div>
                     <div className="text-xs text-gray-500 mt-0.5">${usdOf(cashInfo.credited)} · dev fee ◎{cashInfo.fee.toFixed(4)}</div>
                   </div>
                 )}
@@ -721,8 +780,8 @@ export default function ArenaGame() {
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div>
-                    <div className="arena-wordmark text-3xl sm:text-4xl font-black tracking-tight leading-none">THE VOID ARENA</div>
-                    <div className="text-[11px] sm:text-xs text-gray-400 mt-1.5">
+                    <div className="arena-wordmark text-4xl sm:text-5xl font-black tracking-tight leading-none">THE VOID ARENA</div>
+                    <div className="text-xs sm:text-sm text-gray-400 mt-2">
                       Eat or be eaten — your stake is your bounty, winner takes <span className="text-amber-300 font-semibold">everything</span>.
                     </div>
                   </div>
@@ -771,14 +830,14 @@ export default function ArenaGame() {
                         <button
                           key={usd}
                           onClick={() => { setStakeUsd(usd); sfx.click(); }}
-                          className={`py-3 rounded-2xl border text-center transition-all ${
+                          className={`py-4 rounded-2xl border text-center transition-all ${
                             stakeUsd === usd
                               ? "border-rose-400/70 bg-gradient-to-b from-rose-500/20 to-fuchsia-500/10 scale-105 shadow-[0_0_20px_-4px_rgba(244,63,94,0.5)]"
-                              : "border-white/10 bg-black/30 hover:border-white/25"
+                              : "border-white/10 bg-black/30 hover:border-white/25 active:scale-95"
                           }`}
                         >
-                          <div className={`text-base font-extrabold ${stakeUsd === usd ? "text-rose-200" : "text-gray-200"}`}>${usd}</div>
-                          <div className="text-[10px] text-gray-500 tabular-nums">◎{(usd / solUsd).toFixed(3)}</div>
+                          <div className={`text-xl font-extrabold ${stakeUsd === usd ? "text-rose-200" : "text-gray-200"}`}>${usd}</div>
+                          <div className="flex items-center justify-center gap-1 text-[12px] text-gray-500 tabular-nums mt-1"><SolanaLogo size={11} />{(usd / solUsd).toFixed(3)}</div>
                         </button>
                       ))}
                     </div>
@@ -792,14 +851,14 @@ export default function ArenaGame() {
                         <button
                           onClick={() => { sfx.enter(); join(); }}
                           disabled={working !== null || (balance !== null && balance < stakeSol)}
-                          className="arena-grad-btn w-full py-4 rounded-2xl text-white font-black text-lg tracking-wide hover:scale-[1.02] transition-transform disabled:opacity-40 disabled:hover:scale-100"
+                          className="arena-grad-btn w-full py-5 rounded-2xl text-white font-black text-xl tracking-wide hover:scale-[1.02] active:scale-[0.99] transition-transform disabled:opacity-40 disabled:hover:scale-100"
                         >
                           {working === "join" ? "ENTERING…" : `ENTER ARENA · $${stakeUsd}`}
                         </button>
-                        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-gray-400">
-                          <span>Balance <span className="text-emerald-300 font-semibold tabular-nums">{balance === null ? "—" : `◎${balance.toFixed(3)}`}</span></span>
+                        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-gray-400">
+                          <span className="inline-flex items-center gap-1">Balance <span className="inline-flex items-center gap-1 text-emerald-300 font-semibold tabular-nums">{balance === null ? "—" : <><SolanaLogo size={12} />{balance.toFixed(3)}</>}</span></span>
                           <span className="text-gray-700">·</span>
-                          <span>Need <span className="text-amber-300 font-semibold tabular-nums">◎{stakeSol.toFixed(3)}</span></span>
+                          <span className="inline-flex items-center gap-1">Need <span className="inline-flex items-center gap-1 text-amber-300 font-semibold tabular-nums"><SolanaLogo size={12} />{stakeSol.toFixed(3)}</span></span>
                           {balance !== null && balance < stakeSol && (
                             <button onClick={() => { setTab("wallet"); sfx.tab(); }} className="text-cyan-300 underline underline-offset-2 hover:text-cyan-200">Deposit →</button>
                           )}
@@ -812,10 +871,14 @@ export default function ArenaGame() {
                 {/* ── WALLET / WITHDRAW ── */}
                 {tab === "wallet" && (
                   <div className="arena-rise">
-                    <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/10 to-transparent p-5 text-center mb-5">
-                      <div className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Arena balance</div>
-                      <div className="text-4xl font-black text-emerald-300 tabular-nums">{balance === null ? "—" : `◎${balance.toFixed(3)}`}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{balance === null ? "" : `≈ $${usdOf(balance)}`}</div>
+                    <div className="relative overflow-hidden rounded-2xl border border-emerald-500/25 bg-gradient-to-b from-emerald-500/[0.12] via-emerald-500/[0.03] to-transparent p-6 text-center mb-5">
+                      <div className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-emerald-400/10 blur-3xl" />
+                      <div className="relative text-[11px] text-gray-400 uppercase tracking-[0.18em] mb-2">Arena balance</div>
+                      <div className="relative flex items-center justify-center gap-2.5">
+                        <SolanaLogo size={32} />
+                        <span className="text-5xl font-black text-emerald-300 tabular-nums leading-none">{balance === null ? "—" : balance.toFixed(3)}</span>
+                      </div>
+                      <div className="relative text-sm text-gray-500 mt-2">{balance === null ? "" : `≈ $${usdOf(balance)}`}</div>
                     </div>
 
                     {!mounted ? null : !wallet.publicKey && !guest ? (
@@ -824,35 +887,109 @@ export default function ArenaGame() {
                       </div>
                     ) : wallet.publicKey ? (
                       <>
-                        <div className="text-[11px] text-gray-400 mb-2 uppercase tracking-wider font-semibold">Instant deposit</div>
-                        <div className="grid grid-cols-3 gap-2 mb-5">
-                          {DEPOSIT_USD.map((usd) => (
-                            <button
-                              key={usd}
-                              onClick={() => deposit(usd)}
-                              disabled={working !== null}
-                              className="py-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/5 text-emerald-300 text-sm font-extrabold hover:bg-emerald-500/15 transition-colors disabled:opacity-50"
-                            >
-                              {working === `dep${usd}` ? "…" : `+$${usd}`}
-                            </button>
-                          ))}
+                        {/* Deposit / Withdraw toggle — two states */}
+                        <div className="grid grid-cols-2 gap-1 p-1 mb-5 rounded-2xl border border-white/10 bg-black/40">
+                          <button
+                            onClick={() => { setWalletMode("deposit"); sfx.tab(); }}
+                            className={`py-3.5 rounded-xl text-sm font-black uppercase tracking-wide transition-all ${walletMode === "deposit" ? "bg-emerald-500/20 text-emerald-200 border border-emerald-500/40" : "text-gray-400 hover:text-gray-200"}`}
+                          >
+                            Deposit
+                          </button>
+                          <button
+                            onClick={() => { setWalletMode("withdraw"); sfx.tab(); }}
+                            className={`py-3.5 rounded-xl text-sm font-black uppercase tracking-wide transition-all ${walletMode === "withdraw" ? "bg-amber-500/20 text-amber-200 border border-amber-500/40" : "text-gray-400 hover:text-gray-200"}`}
+                          >
+                            Withdraw
+                          </button>
                         </div>
 
-                        <div className="text-[11px] text-gray-400 mb-2 uppercase tracking-wider font-semibold">Withdraw to wallet</div>
-                        <button
-                          onClick={withdrawAll}
-                          disabled={working !== null || balance === null || balance < 0.01}
-                          className="w-full py-3 rounded-2xl border border-white/15 bg-white/5 text-gray-100 text-sm font-bold hover:bg-white/10 transition-colors disabled:opacity-40"
-                        >
-                          {working === "withdraw"
-                            ? "Withdrawing…"
-                            : balance && balance >= 0.01
-                            ? `Withdraw ◎${Math.min(5, Math.floor(balance * 1000) / 1000).toFixed(3)} → wallet`
-                            : "Nothing to withdraw"}
-                        </button>
-                        <div className="text-[10px] text-gray-600 mt-2 text-center leading-relaxed">
-                          Sends your ledger SOL to your wallet (max ◎5 per withdraw). Kills absorb 100% of a victim&apos;s bounty; cashing out costs a 10% dev fee.
-                        </div>
+                        {walletMode === "deposit" ? (() => {
+                          const dUsd = parseFloat(depositAmt.replace(",", "."));
+                          const dValid = Number.isFinite(dUsd) && dUsd >= 1;
+                          return (
+                            <>
+                              <div className="relative mb-3">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl font-black text-emerald-400">$</span>
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={depositAmt}
+                                  onChange={(e) => setDepositAmt(e.target.value.replace(/[^0-9.,]/g, ""))}
+                                  placeholder="10"
+                                  className="w-full rounded-2xl bg-black/60 border border-white/15 text-white pl-11 pr-4 py-4 text-2xl font-bold tabular-nums focus:outline-none focus:border-emerald-500/60"
+                                />
+                              </div>
+                              <div className="grid grid-cols-3 gap-2 mb-4">
+                                {DEPOSIT_USD.map((usd) => (
+                                  <button
+                                    key={usd}
+                                    onClick={() => { setDepositAmt(String(usd)); sfx.click(); }}
+                                    className="py-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 text-emerald-300 text-base font-extrabold hover:bg-emerald-500/15 active:scale-95 transition-all"
+                                  >
+                                    +${usd}
+                                  </button>
+                                ))}
+                              </div>
+                              <button
+                                onClick={() => deposit(dUsd)}
+                                disabled={working !== null || !dValid}
+                                className="w-full py-5 rounded-2xl border border-emerald-500/50 bg-emerald-500/20 text-emerald-100 text-lg font-black hover:bg-emerald-500/30 active:scale-[0.98] transition-all disabled:opacity-40"
+                              >
+                                {working !== null && working.startsWith("dep")
+                                  ? "Depositing…"
+                                  : dValid
+                                  ? <span className="inline-flex items-center gap-1.5">Deposit ${dUsd} · <SolanaLogo size={16} />{(dUsd / solUsd).toFixed(3)}</span>
+                                  : "Enter an amount"}
+                              </button>
+                              <div className="text-[11px] text-gray-600 mt-2 text-center">Pays real devnet SOL at ${solUsd.toFixed(0)}/◎ into your arena balance.</div>
+                            </>
+                          );
+                        })() : (() => {
+                          const wCap = Math.min(5, Math.floor((balance ?? 0) * 1000) / 1000);
+                          const typed = parseFloat(withdrawAmt.replace(",", "."));
+                          const valid = Number.isFinite(typed) && typed >= 0.01;
+                          return (
+                            <>
+                              <div className="relative mb-3">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2"><SolanaLogo size={24} /></span>
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={withdrawAmt}
+                                  onChange={(e) => setWithdrawAmt(e.target.value.replace(/[^0-9.,]/g, ""))}
+                                  placeholder="0.000"
+                                  className="w-full rounded-2xl bg-black/60 border border-white/15 text-white pl-12 pr-4 py-4 text-2xl font-bold tabular-nums focus:outline-none focus:border-amber-500/60"
+                                />
+                              </div>
+                              <div className="grid grid-cols-3 gap-2 mb-4">
+                                {([["25%", 0.25], ["50%", 0.5], ["Max", 1]] as const).map(([label, frac]) => (
+                                  <button
+                                    key={label}
+                                    onClick={() => { setWithdrawAmt((wCap * frac).toFixed(3)); sfx.click(); }}
+                                    disabled={wCap < 0.01}
+                                    className="py-3 rounded-xl border border-white/10 bg-white/5 text-gray-200 text-base font-bold hover:bg-white/10 active:scale-95 transition-all disabled:opacity-40"
+                                  >
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
+                              <button
+                                onClick={() => withdraw(typed)}
+                                disabled={working !== null || !valid || wCap < 0.01}
+                                className="w-full py-5 rounded-2xl border border-amber-500/50 bg-amber-500/20 text-amber-100 text-lg font-black hover:bg-amber-500/30 active:scale-[0.98] transition-all disabled:opacity-40"
+                              >
+                                {working === "withdraw"
+                                  ? "Withdrawing…"
+                                  : valid
+                                  ? <span className="inline-flex items-center gap-1.5">Withdraw <SolanaLogo size={16} />{Math.min(typed, wCap).toFixed(3)} → wallet</span>
+                                  : wCap < 0.01 ? "Nothing to withdraw" : "Enter an amount"}
+                              </button>
+                              <div className="text-[11px] text-gray-600 mt-2 text-center leading-relaxed">
+                                Available <span className="inline-flex items-center gap-0.5"><SolanaLogo size={10} />{wCap.toFixed(3)}</span> · max ◎5 per withdraw.
+                              </div>
+                            </>
+                          );
+                        })()}
                       </>
                     ) : (
                       <button onClick={devTopup} className="w-full py-3 rounded-2xl border border-white/15 text-gray-200 text-sm font-bold hover:bg-white/5">
@@ -930,6 +1067,53 @@ export default function ArenaGame() {
                   : <img src="/icons/ui-unmute.png" alt="Mute" className="w-5 h-5 object-contain inline-block" />}
                   </button>
                 </div>
+              </div>
+
+                {/* RIGHT side panel — live top hunters (desktop only) */}
+                <aside className="hidden lg:flex flex-col gap-3 w-72 shrink-0 self-center">
+                  <div className="relative overflow-hidden rounded-2xl border border-amber-500/25 bg-gradient-to-b from-amber-500/[0.10] via-amber-500/[0.02] to-transparent p-5 flex flex-col gap-3 max-h-[74vh]">
+                    <div className="pointer-events-none absolute -top-12 -left-12 h-32 w-32 rounded-full bg-amber-500/10 blur-3xl" />
+                    <div className="relative flex items-center justify-between">
+                      <h3 className="text-xl font-black tracking-tight bg-gradient-to-r from-amber-300 to-yellow-200 bg-clip-text text-transparent">Top Hunters</h3>
+                      <button onClick={() => { loadBoard(); sfx.click(); }} className="text-base text-gray-500 hover:text-gray-300" title="Refresh">↻</button>
+                    </div>
+                    {board.length === 0 ? (
+                      <div className="relative text-sm text-gray-500 py-8 text-center">{boardLoading ? "Loading…" : "No hunters yet — be the first."}</div>
+                    ) : (
+                      <div className="relative flex flex-col gap-2 overflow-y-auto">
+                        {board.slice(0, 8).map((r, i) => (
+                          <div
+                            key={i}
+                            className={`flex items-center gap-2.5 rounded-xl border px-2.5 py-2 ${
+                              i === 0 ? "border-amber-400/50 bg-amber-500/10"
+                              : i === 1 ? "border-slate-300/30 bg-white/5"
+                              : i === 2 ? "border-orange-400/30 bg-orange-500/5"
+                              : "border-white/10 bg-black/30"
+                            }`}
+                          >
+                            <div className={`w-5 text-center text-sm font-black tabular-nums ${
+                              i === 0 ? "text-amber-300" : i === 1 ? "text-slate-200" : i === 2 ? "text-orange-300" : "text-gray-600"
+                            }`}>{i + 1}</div>
+                            {r.alienId ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={apiStaticUrl(`static/${r.alienId}.png`)} alt="" className="w-9 h-9 rounded-lg object-cover border border-white/10" />
+                            ) : (
+                              <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/10" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="truncate text-sm text-gray-100 font-bold">{r.name}</div>
+                              <div className="text-[11px] text-gray-500">{r.kills} kills</div>
+                            </div>
+                            <div className="flex items-center gap-1 text-sm font-black text-amber-300 tabular-nums">
+                              <SolanaLogo size={13} />{r.bounty.toFixed(2)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </aside>
+
               </div>
             </div>
           )}

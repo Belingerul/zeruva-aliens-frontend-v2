@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { Connection, Transaction } from "@solana/web3.js";
+import { Transaction } from "@solana/web3.js";
 import TopBar from "./TopBar";
 import {
   getMarketplaceListings,
@@ -19,16 +19,16 @@ import {
   type AlienWithStats,
 } from "../api";
 import { ensureAuth } from "../utils/ensureAuth";
+import { getConnection } from "../utils/solanaConnection";
 
-const RPC_URL =
-  process.env.NEXT_PUBLIC_RPC_URL || "https://api.devnet.solana.com";
-
-const TIER_COLORS: Record<string, { border: string; bg: string; text: string }> = {
-  Legendary: { border: "border-orange-400/60", bg: "bg-orange-400/10", text: "text-orange-300" },
-  Epic:       { border: "border-purple-400/60", bg: "bg-purple-400/10", text: "text-purple-300" },
-  Rare:       { border: "border-blue-400/60",   bg: "bg-blue-400/10",   text: "text-blue-300"   },
-  Common:     { border: "border-gray-500/60",   bg: "bg-gray-500/10",   text: "text-gray-400"   },
-  Nothing:    { border: "border-gray-700/40",   bg: "bg-gray-700/10",   text: "text-gray-600"   },
+// Canonical rarity colors — kept in sync with Colony (AlienMenu/SpaceshipSlot):
+// Common = slate, Rare = sky, Epic = purple, Legendary = amber/gold.
+const TIER_COLORS: Record<string, { border: string; bg: string; text: string; glow: string }> = {
+  Legendary: { border: "border-amber-400/60",  bg: "bg-amber-400/[0.08]",  text: "text-amber-300",  glow: "shadow-[0_0_26px_-10px_rgba(251,191,36,0.7)]" },
+  Epic:       { border: "border-purple-400/60", bg: "bg-purple-400/[0.08]", text: "text-purple-300", glow: "shadow-[0_0_26px_-10px_rgba(168,85,247,0.65)]" },
+  Rare:       { border: "border-sky-400/60",    bg: "bg-sky-400/[0.08]",    text: "text-sky-300",    glow: "shadow-[0_0_26px_-10px_rgba(56,189,248,0.6)]"  },
+  Common:     { border: "border-slate-400/50",  bg: "bg-slate-400/[0.06]",  text: "text-slate-300",  glow: "shadow-[0_0_22px_-12px_rgba(148,163,184,0.6)]" },
+  Nothing:    { border: "border-gray-700/40",   bg: "bg-gray-700/10",       text: "text-gray-600",   glow: "" },
 };
 
 const TIER_ICON: Record<string, string> = {
@@ -66,31 +66,38 @@ function AlienCard({
   const ts = tierStyle(tier);
   return (
     <div
-      className={`rounded-xl border ${ts.border} ${ts.bg} bg-black/40 flex flex-col overflow-hidden`}
+      className={`group relative rounded-xl border ${ts.border} ${ts.bg} bg-black/40 flex flex-col overflow-hidden transition-all duration-200 hover:-translate-y-1 ${ts.glow}`}
     >
-      <div className="relative">
+      <div className="relative overflow-hidden">
         <img
           src={image}
           alt={`Alien #${alienId}`}
-          className="w-full aspect-square object-cover"
+          className="w-full aspect-square object-cover transition-transform duration-300 group-hover:scale-105"
           onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
         />
-        <span
-          className={`absolute top-1.5 left-1.5 inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${ts.border} ${ts.bg} ${ts.text} uppercase tracking-wider`}
-        >
+        {/* Rarity chip over the art */}
+        <div className={`absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-md border ${ts.border} bg-black/70 backdrop-blur-sm`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {TIER_ICON[tier] && <img src={TIER_ICON[tier]} alt="" className="w-3 h-3 object-contain" />}
-          {tier}
-        </span>
+          {TIER_ICON[tier] && (
+            <img src={`${TIER_ICON[tier]}?v=2`} alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
+          )}
+          <span className={`text-[9px] font-bold uppercase tracking-wide ${ts.text}`}>{tier}</span>
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/80 to-transparent" />
       </div>
-      <div className="flex flex-col gap-1 p-2.5 flex-1">
-        <div className="text-xs font-semibold text-gray-200">Alien #{alienId}</div>
-        <div className="text-[11px] text-gray-400">${roi}/day ROI</div>
+      <div className="flex flex-col gap-0.5 p-2.5 flex-1">
+        <div className="flex items-center justify-between gap-1.5 min-w-0">
+          <span className="text-xs font-bold text-gray-100 truncate">Alien #{alienId}</span>
+          <span className="text-[10px] text-gray-500 shrink-0 tabular-nums">${roi}/day</span>
+        </div>
         {priceSol !== undefined && (
-          <div className="text-sm font-bold text-emerald-300 mt-0.5">{priceSol} SOL</div>
+          <div className="flex items-baseline gap-1 mt-0.5">
+            <span className="text-base font-extrabold text-emerald-300 tabular-nums leading-none">{priceSol}</span>
+            <span className="text-[10px] font-bold text-emerald-400/70">SOL</span>
+          </div>
         )}
         {sellerAddr && (
-          <div className="text-[10px] text-gray-500">{shortAddr(sellerAddr)}</div>
+          <div className="text-[10px] text-gray-500 truncate">by {shortAddr(sellerAddr)}</div>
         )}
         {action && <div className="mt-auto pt-2">{action}</div>}
       </div>
@@ -199,7 +206,7 @@ export default function MarketplacePanel() {
       const resp = await listAlienForSale(listTarget.id, price);
       // On-chain escrow: sign the NFT transfer into escrow, then activate.
       if (resp.escrow && resp.serialized) {
-        const connection = new Connection(RPC_URL, "confirmed");
+        const connection = getConnection("confirmed");
         const tx = Transaction.from(Buffer.from(resp.serialized, "base64"));
         const signed = await wallet.signTransaction!(tx);
         const sig = await connection.sendRawTransaction(signed.serialize());
@@ -243,7 +250,7 @@ export default function MarketplacePanel() {
       if (quote.devSkip) {
         await confirmBuyListing(buyTarget.id, quote.intentId, null);
       } else {
-        const connection = new Connection(RPC_URL, "confirmed");
+        const connection = getConnection("confirmed");
         const tx = Transaction.from(Buffer.from(quote.serialized!, "base64"));
         const signed = await wallet.signTransaction!(tx);
         const sig = await connection.sendRawTransaction(signed.serialize());
@@ -275,6 +282,17 @@ export default function MarketplacePanel() {
 
       <div className="flex-1 w-full max-w-6xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-5">
 
+        {/* Hero header */}
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-emerald-300 via-emerald-200 to-teal-300 bg-clip-text text-transparent">
+            Marketplace
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-400 mt-1">
+            Trade aliens peer-to-peer — every sale secured by{" "}
+            <span className="font-semibold text-emerald-300/90">on-chain escrow</span>.
+          </p>
+        </div>
+
         {/* Stats bar */}
         <div className="grid grid-cols-3 gap-3">
           {[
@@ -282,15 +300,19 @@ export default function MarketplacePanel() {
             { label: "My Aliens",       value: myAliens.length },
             { label: "My Listings",     value: myListings.length },
           ].map(({ label, value }) => (
-            <div key={label} className="rounded-xl border border-emerald-500/20 bg-black/40 p-3 text-center">
-              <div className="text-xl font-bold text-emerald-300">{value}</div>
-              <div className="text-[11px] text-gray-500 uppercase tracking-wider mt-0.5">{label}</div>
+            <div
+              key={label}
+              className="relative overflow-hidden rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-500/[0.08] via-emerald-500/[0.02] to-transparent p-4 text-center"
+            >
+              <div className="pointer-events-none absolute -top-8 -right-8 h-20 w-20 rounded-full bg-emerald-400/10 blur-2xl" />
+              <div className="relative text-2xl font-black text-emerald-300 tabular-nums">{value}</div>
+              <div className="relative text-[10px] text-gray-400 uppercase tracking-[0.18em] mt-1">{label}</div>
             </div>
           ))}
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2">
+        <div className="inline-flex gap-1 p-1 rounded-xl border border-gray-800 bg-black/40 self-start">
           <button className={tabClass("browse")}    onClick={() => setTab("browse")}>Browse</button>
           <button className={tabClass("myaliens")}  onClick={() => setTab("myaliens")}>My Aliens</button>
           <button className={tabClass("mylistings")} onClick={() => setTab("mylistings")}>My Listings</button>
@@ -315,11 +337,15 @@ export default function MarketplacePanel() {
         {!loading && tab === "browse" && (
           <>
             {listings.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center text-gray-500 py-20">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/icons/empty-no-aliens.png" alt="" className="w-16 h-16 object-contain mx-auto mb-3" />
-                  <div className="text-sm">No aliens listed yet. Be the first!</div>
+              <div className="flex-1 flex items-center justify-center py-16">
+                <div className="text-center max-w-xs px-6">
+                  <div className="relative mx-auto mb-4 grid place-items-center w-24 h-24 rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.05]">
+                    <div className="pointer-events-none absolute inset-0 rounded-2xl bg-emerald-400/5 blur-xl" />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/icons/empty-no-aliens.png" alt="" className="relative w-14 h-14 object-contain opacity-90" />
+                  </div>
+                  <div className="text-base font-bold text-gray-200">No aliens listed yet</div>
+                  <div className="text-sm text-gray-500 mt-1">Be the first — list one from the My Aliens tab.</div>
                 </div>
               </div>
             ) : (
@@ -345,7 +371,7 @@ export default function MarketplacePanel() {
                       ) : (
                         <button
                           onClick={() => { setBuyTarget(l); setBuyDone(false); setErr(null); }}
-                          className="w-full py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-colors"
+                          className="w-full py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 active:scale-95 transition-all"
                         >
                           Buy
                         </button>
@@ -362,12 +388,25 @@ export default function MarketplacePanel() {
         {!loading && tab === "myaliens" && (
           <>
             {!walletAddr ? (
-              <div className="text-center text-gray-500 py-20 text-sm">Connect your wallet to see your aliens.</div>
+              <div className="flex-1 flex items-center justify-center py-16">
+                <div className="text-center text-gray-400 text-sm px-6">Connect your wallet to see your aliens.</div>
+              </div>
             ) : myAliens.length === 0 ? (
-              <div className="text-center text-gray-500 py-20">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/icons/empty-no-aliens.png" alt="" className="w-16 h-16 object-contain mx-auto mb-3" />
-                <div className="text-sm">No aliens yet. Hatch some in The Colony!</div>
+              <div className="flex-1 flex items-center justify-center py-16">
+                <div className="text-center max-w-xs px-6">
+                  <div className="relative mx-auto mb-4 grid place-items-center w-24 h-24 rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.05]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/icons/empty-no-aliens.png" alt="" className="relative w-14 h-14 object-contain opacity-90" />
+                  </div>
+                  <div className="text-base font-bold text-gray-200">No aliens yet</div>
+                  <div className="text-sm text-gray-500 mt-1 mb-4">Hatch some in The Colony to start trading.</div>
+                  <a
+                    href="/colony"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-sm font-semibold hover:bg-emerald-500/30 active:scale-95 transition-all"
+                  >
+                    Go to the Colony
+                  </a>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -386,7 +425,7 @@ export default function MarketplacePanel() {
                         ) : (
                           <button
                             onClick={() => { setListTarget(a); setListPrice(""); setErr(null); }}
-                            className="w-full py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-colors"
+                            className="w-full py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 active:scale-95 transition-all"
                           >
                             List for Sale
                           </button>
@@ -404,12 +443,19 @@ export default function MarketplacePanel() {
         {!loading && tab === "mylistings" && (
           <>
             {!walletAddr ? (
-              <div className="text-center text-gray-500 py-20 text-sm">Connect your wallet.</div>
+              <div className="flex-1 flex items-center justify-center py-16">
+                <div className="text-center text-gray-400 text-sm px-6">Connect your wallet.</div>
+              </div>
             ) : myListings.length === 0 ? (
-              <div className="text-center text-gray-500 py-20">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/icons/empty-no-items.png" alt="" className="w-16 h-16 object-contain mx-auto mb-3" />
-                <div className="text-sm">No active listings. Go to My Aliens to list one.</div>
+              <div className="flex-1 flex items-center justify-center py-16">
+                <div className="text-center max-w-xs px-6">
+                  <div className="relative mx-auto mb-4 grid place-items-center w-24 h-24 rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.05]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/icons/empty-no-items.png" alt="" className="relative w-14 h-14 object-contain opacity-90" />
+                  </div>
+                  <div className="text-base font-bold text-gray-200">No active listings</div>
+                  <div className="text-sm text-gray-500 mt-1">Head to My Aliens to list one for sale.</div>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
