@@ -158,13 +158,13 @@ function AppContent() {
       <div className="flex-1 w-full max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 pb-28 pt-4">
         {tab === "expedition" ? (
           <div className="xl:flex xl:gap-6 xl:items-start">
-            <aside className="hidden xl:block xl:w-[240px] xl:shrink-0 sticky top-4">
+            <aside className="hidden xl:block xl:w-[280px] xl:shrink-0 sticky top-4">
               <HowToPlayPanel />
             </aside>
             <div className="min-w-0 xl:flex-1">
               <GreatExpeditionPanel />
             </div>
-            <aside className="hidden xl:block xl:w-[240px] xl:shrink-0 sticky top-4">
+            <aside className="hidden xl:block xl:w-[280px] xl:shrink-0 sticky top-4">
               <PrizeSplitPanel />
             </aside>
           </div>

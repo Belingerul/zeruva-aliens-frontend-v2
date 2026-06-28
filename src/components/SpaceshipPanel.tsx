@@ -392,8 +392,18 @@ export default function SpaceshipPanel({
                 : "Start Expedition (6h)"}
           </motion.button>
 
-          <div className="text-xs text-gray-400 text-center">
-            Earnings happen only during expeditions (assigned aliens only).
+          <div className="flex items-center justify-center text-xs">
+            {expedition?.expedition_active ? (
+              <span className="flex items-center gap-1.5 font-semibold text-emerald-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+                Earning while deployed
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-gray-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-600" />
+                Idle — launch to start earning
+              </span>
+            )}
           </div>
         </div>
       </div>
